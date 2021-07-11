@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+networkx = "*"
+python-louvain = "*"
+ipykernel = "*"
+nb-black = "*"
+pre-commit = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

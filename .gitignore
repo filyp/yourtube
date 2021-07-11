@@ -1,0 +1,4 @@
+data
+.virtual_documents
+youtube-recommender/.ipynb_checkpoints
+youtube-recommender/__pycache__
