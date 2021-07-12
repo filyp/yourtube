@@ -1,14 +1,12 @@
 import json
 import re
-import pickle
 import csv
-from time import time
-import os.path
 import datetime
 import requests
+from time import time
+from tqdm import tqdm
 
-
-id_to_url = "https://www.youtube.com/watch?v={}"
+from helpers import id_to_url
 
 
 def get_freetube_favorites_ids():
@@ -71,15 +69,31 @@ def scrape(id_, G, skip_if_fresher_than=None):
         G.add_edge(id_, rec)
     G.nodes[id_]["title"] = get_title(content)
     G.nodes[id_]["time_scraped"] = time()
-    # TODO scrape thumbnails:    "thumbnail":{"thumbnails":[{"url":"https://i.ytimg.com
 
 
-# def get_liked_time_sorted_sources(G):
-#     sources = [
-#         (G.nodes[node]["time_liked"], node)
-#         for node in G.nodes
-#         if "time_liked" in G.nodes[node]
-#     ]
-#     sources = sorted(sources)
-#     sources = [node for timestamp, node in sources]
-#     return sources
+def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
+    """
+    Scrapes videos from the ids_to_add list and adds them to graph G
+
+    skip_if_fresher_than is in seconds
+    if set, videos scraped earlier than this time will be skipped
+    """
+    print(f"adding {len(ids_to_add)} nodes")
+
+    skipped = 0
+    for id_ in tqdm(ids_to_add, ncols=80):
+        # check if this video was already scraped recently
+        if (
+            skip_if_fresher_than is not None
+            and id_ in G.nodes
+            and "time_scraped" in G.nodes[id_]
+            and time() - G.nodes[id_]["time_scraped"] < skip_if_fresher_than
+        ):
+            skipped += 1
+            continue
+
+        # TODO maybe omit videos where title is None
+        # they are down but are tried do to be scraped every time
+        scrape(id_, G)
+
+    print(f"skipped {skipped} videos")

@@ -9,6 +9,12 @@ python-louvain = "*"
 ipykernel = "*"
 nb-black = "*"
 pre-commit = "*"
+tqdm = "*"
+requests = "*"
+matplotlib = "*"
+scipy = "*"
+ipywidgets = "*"
+voila = "*"
 
 [dev-packages]
 
