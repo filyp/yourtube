@@ -15,6 +15,7 @@ matplotlib = "*"
 scipy = "*"
 ipywidgets = "*"
 voila = "*"
+ipyevents = "*"
 
 [dev-packages]
 

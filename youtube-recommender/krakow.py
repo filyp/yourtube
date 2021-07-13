@@ -7,12 +7,22 @@
 
 #    source: https://github.com/tbonald/paris/blob/master/paris.py
 #    theory: https://arxiv.org/pdf/1806.01664.pdf
+#    this is a slighly modified version of paris, dubbed "krakow"
 
 import numpy as np
 import networkx as nx
 
 
-def paris(G, copy_graph=True):
+def krakow(G, balance=2, copy_graph=True):
+    """
+    balance should be >= 1
+    at 1, the algorithm is the same as paris
+    the higher the balance, the more even the merges
+    too high balance can harm clustering quality
+
+    TODO: prove that for balance > 1 algorithm is reducible
+          https://arxiv.org/pdf/1806.01664.pdf
+    """
     n = G.number_of_nodes()
     if copy_graph:
         F = G.copy()
@@ -57,8 +67,12 @@ def paris(G, copy_graph=True):
             b = -1
             for v in F.neighbors(a):
                 if v != a:
-                    d = (w[v] * w[a]) ** 2 / float(F[a][v]["weight"]) / float(wtot)
-                    #                     d = w[v] * w[a] / float(F[a][v]['weight']) / float(wtot)
+                    d = (
+                        (w[v] * w[a]) ** balance
+                        / float(F[a][v]["weight"])
+                        / float(wtot)
+                    )
+                    # d = w[v] * w[a] / float(F[a][v]['weight']) / float(wtot)
                     if d < dmin:
                         b = v
                         dmin = d

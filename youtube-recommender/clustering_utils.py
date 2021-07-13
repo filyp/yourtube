@@ -15,6 +15,8 @@ from scipy.cluster.hierarchy import dendrogram
 # from louvain import louvain
 from os.path import join
 
+plt.style.use("dark_background")
+
 #########################
 ### Display functions ###
 #########################
@@ -68,14 +70,14 @@ def plot_best_clusterings(G, D, k, pos, width=16, height=8):
 
 
 # Plot dendrogram
-def plot_dendrogram(D, logscale=True):
-    plt.figure(figsize=(25, 10))
+def plot_dendrogram(D, logscale=True, clusters_limit=400, width=14, height=5):
+    plt.figure(figsize=(width, height))
     Dlog = D.copy()
     if logscale:
         Dlog[:, 2] = np.log(Dlog[:, 2])
         Dlog[1:, 2] = Dlog[1:, 2] - Dlog[1, 2]
         Dlog[0, 2] = 0
-    dendrogram(Dlog, leaf_rotation=90.0)
+    dendrogram(Dlog, leaf_rotation=90.0, truncate_mode="lastp", p=clusters_limit)
     plt.axis("off")
     plt.show()
 
