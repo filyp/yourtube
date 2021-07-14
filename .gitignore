@@ -1,5 +1,6 @@
 data
 .virtual_documents
-youtube-recommender/.ipynb_checkpoints
-youtube-recommender/__pycache__
-youtube-recommender/failed/.ipynb_checkpoints
+yourtube/.ipynb_checkpoints
+yourtube/__pycache__
+yourtube/failed/.ipynb_checkpoints
+.ipynb_checkpoints

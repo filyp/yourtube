@@ -16,6 +16,7 @@ def save_graph(G):
 
     with open(graph_path, "wb") as handle:
         pickle.dump(G, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # print("graph saved")
 
 
 def load_graph():
@@ -29,11 +30,11 @@ def load_graph():
         return nx.DiGraph()
 
 
-def get_liked_from_time_range(G, start, end=None):
+def get_from_playlists_from_time_range(G, start, end=None):
     if end is None:
         end = time()
     return [
         id_
         for id_, node in G.nodes.data()
-        if "time_liked" in node and start < node["time_liked"] < end
+        if "time_added" in node and start < node["time_added"] < end
     ]

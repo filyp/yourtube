@@ -1,5 +1,6 @@
-import json
+import os
 import re
+import json
 import csv
 import datetime
 import requests
@@ -28,12 +29,16 @@ def get_exported_youtube_playlist_ids(filename):
         reader = csv.reader(file, delimiter=",")
         data_read = [row for row in reader]
 
-    data_read = data_read[5:]  # strip metadata
-    ids, timestamps = zip(*data_read)
+    data_read = data_read[4:-1]  # strip metadata
+    if data_read:
+        ids, timestamps = zip(*data_read)
+    else:
+        ids = []
+        timestamps = []
     # strip whitespaces
     video_ids = [id_.strip() for id_ in ids]
-    times_liked = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-    return video_ids, times_liked
+    times_added = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
+    return video_ids, times_added
 
 
 def get_content(id_):
