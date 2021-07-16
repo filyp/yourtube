@@ -7,7 +7,17 @@ import requests
 from time import time
 from tqdm import tqdm
 
-from common import id_to_url
+from yourtube.common import (
+    save_graph,
+    load_graph,
+    get_from_playlists_from_time_range,
+    id_to_url,
+)
+
+seconds_in_month = 60 * 60 * 24 * 30.4
+
+home = os.path.expanduser("~")
+playlists_path = f"{home}/.yourtube/Takeout/YouTube and YouTube Music/playlists"
 
 
 def get_freetube_favorites_ids():
@@ -102,3 +112,29 @@ def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
         scrape(id_, G)
 
     print(f"skipped {skipped} videos")
+
+
+def scrape_playlist(playlist_name, G):
+    ids_to_add, times_added = get_exported_youtube_playlist_ids(
+        f"{playlists_path}/{playlist_name}.csv"
+    )
+
+    scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
+
+    # add data about the time they were added
+    for id_, time_added in zip(ids_to_add, times_added):
+        if id_ in G:
+            G.nodes[id_]["time_added"] = time_added
+            G.nodes[id_]["from"] = playlist_name
+
+
+def scrape_all_playlists():
+    G = load_graph()
+    for filename in os.listdir(playlists_path):
+        playlist_name = re.match(r"(.*)\.csv", filename)[1]
+
+        print()
+        print("scraping: ", playlist_name)
+        scrape_playlist(playlist_name, G)
+
+    save_graph(G)

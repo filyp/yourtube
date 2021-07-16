@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yourtube"
-version = "0.1.1"
+version = "0.1.3"
 description = "Better youtube recommendations"
 authors = ["Filip Sondej <filipsondej@protonmail.com>"]
 license = "LGPL-2.1"
@@ -27,3 +27,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 yourtube = 'yourtube.__main__:run'
+yourtube-scrape = 'yourtube.scrape_helpers:scrape_all_playlists'

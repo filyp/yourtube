@@ -6,7 +6,8 @@ from time import time
 id_to_url = "https://www.youtube.com/watch?v={}"
 id_to_thumbnail = "https://i.ytimg.com/vi/{}/hqdefault.jpg"
 
-graph_path = "../data/graph.pickle"
+home = os.path.expanduser("~")
+graph_path = f"{home}/.yourtube/graph.pickle"
 
 
 def save_graph(G):
