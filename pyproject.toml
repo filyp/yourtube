@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "yourtube"
+version = "0.1.0"
+description = "Better youtube recommendations"
+authors = ["Filip Sondej <filipsondej@protonmail.com>"]
+license = "LGPL-2.1"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+networkx = "^2.6.1"
+tqdm = "^4.61.2"
+requests = "^2.26.0"
+matplotlib = "^3.4.2"
+numpy = "^1.21.0"
+ipywidgets = "^7.6.3"
+ipyevents = "^2.0.1"
+voila = "^0.2.10"
+
+[tool.poetry.dev-dependencies]
+nb-black = "^1.0.7"
+pre-commit = "^2.13.0"
+ipykernel = "^6.0.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
