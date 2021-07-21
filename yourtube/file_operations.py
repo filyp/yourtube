@@ -127,4 +127,4 @@ def get_youtube_watched_ids():
 
     ids, timestamps, _ = zip(*watched)
     unixtimes = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-    return ids, timestamps
+    return ids, unixtimes

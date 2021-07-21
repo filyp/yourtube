@@ -40,7 +40,7 @@ def get_title(content):
     return title
 
 
-def scrape(id_, G, skip_if_fresher_than=None):
+def scrape(id_, G):
     content = get_content(id_)
     recs = get_recommended_ids(content, id_)
     if not recs:
@@ -114,14 +114,14 @@ def scrape_watched():
     G = load_graph()
 
     try:
-        ids_to_add, times_watched = get_youtube_watched_ids()
+        ids_to_add, watched_times = get_youtube_watched_ids()
 
         scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
         # add data about the time they were added
-        for id_, time_watched in zip(ids_to_add, times_watched):
+        for id_, watched_time in zip(ids_to_add, watched_times):
             if id_ in G:
-                G.nodes[id_]["watched_time"] = time_watched
+                G.nodes[id_]["watched_time"] = watched_time
     except:
         save_graph(G)
         print("We crashed. Saving the graph...")
