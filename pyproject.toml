@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yourtube"
-version = "0.1.4"
+version = "0.2.0"
 description = "Better youtube recommendations"
 authors = ["Filip Sondej <filipsondej@protonmail.com>"]
 license = "LGPL-2.1"
@@ -15,6 +15,8 @@ numpy = "^1.21.0"
 ipywidgets = "^7.6.3"
 ipyevents = "^2.0.1"
 voila = "^0.2.10"
+magic-wormhole = "^0.12.0"
+python-dateutil = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.13.0"
@@ -27,4 +29,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 yourtube = 'yourtube.__init__:run'
-yourtube-scrape = 'yourtube.scrape_helpers:scrape_all_playlists'
+yourtube-scrape = 'yourtube.scraping:scrape_all_playlists'
+yourtube-scrape-watched = 'yourtube.scraping:scrape_watched'

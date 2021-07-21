@@ -1,54 +1,19 @@
-import os
 import re
-import json
-import csv
-import datetime
 import requests
 from time import time
 from tqdm import tqdm
 
-from yourtube.common import (
+
+from yourtube.file_operations import (
     save_graph,
     load_graph,
-    get_from_playlists_from_time_range,
     id_to_url,
+    get_playlist_names,
+    get_youtube_playlist_ids,
+    get_youtube_watched_ids,
 )
 
 seconds_in_month = 60 * 60 * 24 * 30.4
-
-home = os.path.expanduser("~")
-playlists_path = f"{home}/.yourtube/Takeout/YouTube and YouTube Music/playlists"
-
-
-def get_freetube_favorites_ids():
-    with open("/home/filip/.config/FreeTube/playlists.db") as db:
-        lines = db.readlines()
-    playlist = json.loads(lines[-1])
-    videos = playlist["videos"]
-    video_ids = [video["videoId"] for video in videos]
-    return video_ids
-
-
-def get_exported_youtube_playlist_ids(filename):
-    def timestamp_to_seconds(timestamp):
-        epoch = datetime.datetime.utcfromtimestamp(0)
-        utc = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S UTC")
-        return (utc - epoch).total_seconds()
-
-    with open(filename) as file:
-        reader = csv.reader(file, delimiter=",")
-        data_read = [row for row in reader]
-
-    data_read = data_read[4:-1]  # strip metadata
-    if data_read:
-        ids, timestamps = zip(*data_read)
-    else:
-        ids = []
-        timestamps = []
-    # strip whitespaces
-    video_ids = [id_.strip() for id_ in ids]
-    times_added = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-    return video_ids, times_added
 
 
 def get_content(id_):
@@ -115,9 +80,7 @@ def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
 
 
 def scrape_playlist(playlist_name, G):
-    ids_to_add, times_added = get_exported_youtube_playlist_ids(
-        f"{playlists_path}/{playlist_name}.csv"
-    )
+    ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
 
     scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
@@ -128,13 +91,40 @@ def scrape_playlist(playlist_name, G):
             G.nodes[id_]["from"] = playlist_name
 
 
+# exposed functions:
+
+
 def scrape_all_playlists():
     G = load_graph()
-    for filename in os.listdir(playlists_path):
-        playlist_name = re.match(r"(.*)\.csv", filename)[1]
 
-        print()
-        print("scraping: ", playlist_name)
-        scrape_playlist(playlist_name, G)
+    try:
+        for playlist_name in get_playlist_names():
+            print()
+            print("scraping: ", playlist_name)
+            scrape_playlist(playlist_name, G)
+    except:
+        save_graph(G)
+        print("We crashed. Saving the graph...")
+        raise
+
+    save_graph(G)
+
+
+def scrape_watched():
+    G = load_graph()
+
+    try:
+        ids_to_add, times_watched = get_youtube_watched_ids()
+
+        scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
+
+        # add data about the time they were added
+        for id_, time_watched in zip(ids_to_add, times_watched):
+            if id_ in G:
+                G.nodes[id_]["watched_time"] = time_watched
+    except:
+        save_graph(G)
+        print("We crashed. Saving the graph...")
+        raise
 
     save_graph(G)
