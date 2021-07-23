@@ -25,10 +25,9 @@ graph format:
     id:
         node identifier
         11 characters that identify video on youtube (can be found in URL)
+        all the other fields can be absent if the video hasn't been scraped yet
     title:
         video title
-        can be absent if the video hasn't been scraped yet
-        can be None if the video has been removed from youtube
     time_scraped:
         time when the video has been scraped
         in unix time
@@ -43,6 +42,14 @@ graph format:
         time when the video has been watched
         in unix time
         it is absent if the video hasn't been watched
+    view_count:
+        number of views on youtube
+    like_count:
+        number of likes on youtube
+        can be None if likes are disabled
+    channel_id:
+        id of the channel of this video
+        can be None if the video is unavailable
 
     clusters:
         ...

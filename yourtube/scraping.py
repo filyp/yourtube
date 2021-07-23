@@ -31,24 +31,70 @@ def get_recommended_ids(content, id_):
 
 
 def get_title(content):
-    candidates = re.findall(r"title=\"(.*?)\"><link rel=", content.text)
+    candidates = re.findall(r'title="(.*?)"', content.text)
     candidates = set(candidates)
     if "YouTube" in candidates:
         candidates.remove("YouTube")
-    candidates = list(candidates)
-    title = candidates[0] if candidates else None
+    assert len(candidates) == 1
+    title = candidates.pop()
     return title
+
+
+def get_view_count(content):
+    candidates = re.findall(r'"viewCount":"([0-9]+)"', content.text)
+    candidates = set(candidates)
+    assert len(candidates) == 1
+    view_count = candidates.pop()
+    return int(view_count)
+
+
+def get_like_count(content):
+    candidates = re.findall(
+        r'{"iconType":"LIKE"},"defaultText":{"accessibility":{"accessibilityData":{"label":"(.*?)"',
+        content.text,
+    )
+    candidates = set(candidates)
+    assert len(candidates) <= 1
+    if candidates:
+        like_string = candidates.pop()
+    else:
+        # likes are probably disabled
+        return None
+    like_string = like_string.replace("\xa0", "")
+    like_count = re.findall(r"[0-9]+", like_string)[0]
+    return int(like_count)
+
+
+def get_channel_id(content):
+    candidates = re.findall(
+        r'"subscribeCommand":{"clickTrackingParams":".*?","commandMetadata":{"webCommandMetadata":{"sendPost":true,"apiUrl":"/youtubei/v1/subscription/subscribe"}},"subscribeEndpoint":{"channelIds":\["(.*?)"\]',
+        content.text,
+    )
+    candidates = set(candidates)
+    assert len(candidates) <= 1
+    channel_id = candidates.pop() if candidates else None
+    # no candidates probably means that the video is unavailable
+    return channel_id
 
 
 def scrape(id_, G):
     content = get_content(id_)
     recs = get_recommended_ids(content, id_)
     if not recs:
+        # this video is probably removed from youtube
         return
     for rec in recs:
         G.add_edge(id_, rec)
-    G.nodes[id_]["title"] = get_title(content)
-    G.nodes[id_]["time_scraped"] = time()
+
+    try:
+        G.nodes[id_]["title"] = get_title(content)
+        G.nodes[id_]["view_count"] = get_view_count(content)
+        G.nodes[id_]["like_count"] = get_like_count(content)
+        G.nodes[id_]["channel_id"] = get_channel_id(content)
+        G.nodes[id_]["time_scraped"] = time()
+    except:
+        print("\n\nscraping failed for video: ", id_)
+        raise
 
 
 def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
@@ -79,8 +125,27 @@ def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
     print(f"skipped {skipped} videos")
 
 
-def scrape_playlist(playlist_name, G):
+def only_added_in_last_n_years(ids_to_add, times_added, n=5):
+    seconds_in_year = 60 * 60 * 24 * 365
+    start_time = time() - seconds_in_year * n
+
+    filtered_pairs = []
+    for id_to_add, time_added in zip(ids_to_add, times_added):
+        if start_time < time_added:
+            filtered_pairs.append((id_to_add, time_added))
+
+    if filtered_pairs == []:
+        return [], []
+
+    filtered_ids_to_add, filtered_times_to_add = zip(*filtered_pairs)
+    return filtered_ids_to_add, filtered_times_to_add
+
+
+def scrape_playlist(playlist_name, G, years=5):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
+    ids_to_add, times_added = only_added_in_last_n_years(
+        ids_to_add, times_added, n=years
+    )
 
     scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
@@ -94,14 +159,14 @@ def scrape_playlist(playlist_name, G):
 # exposed functions:
 
 
-def scrape_all_playlists():
+def scrape_all_playlists(years=5):
     G = load_graph()
 
     try:
         for playlist_name in get_playlist_names():
             print()
             print("scraping: ", playlist_name)
-            scrape_playlist(playlist_name, G)
+            scrape_playlist(playlist_name, G, years=years)
     except:
         save_graph(G)
         print("We crashed. Saving the graph...")
@@ -110,11 +175,14 @@ def scrape_all_playlists():
     save_graph(G)
 
 
-def scrape_watched():
+def scrape_watched(years=5):
     G = load_graph()
 
     try:
         ids_to_add, watched_times = get_youtube_watched_ids()
+        ids_to_add, watched_times = only_added_in_last_n_years(
+            ids_to_add, watched_times, n=years
+        )
 
         scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
