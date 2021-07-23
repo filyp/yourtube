@@ -2,6 +2,17 @@
 
 Better youtube recommendations
 
+Features:
+
+- [x] More autonomy when choosing what to watch
+- [x] Completely private
+- [ ] Less clickbait
+- [ ] Recommendations for two or more people
+- [ ] Highly customizable
+- [ ] Freetube integration
+- [ ] Sharing and browsing information bubbles
+
+
 ## Installation
 
 ```
