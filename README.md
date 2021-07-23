@@ -2,8 +2,6 @@
 
 Better youtube recommendations
 
-Features:
-
 - [x] More autonomy when choosing what to watch
 - [x] Completely private
 - [ ] Less clickbait
@@ -38,7 +36,12 @@ Now run:
 yourtube-scrape
 ```
 
-It will collect recommendations from all the videos in your playlists which can take a while.
+It will collect recommendations from the videos in your playlists and from your liked videos, which can take a few hours.
+
+For best experience also run:
+```
+yourtube-scrape-watched
+```
 
 Now, you can explore your recommendations by running:
 ```
