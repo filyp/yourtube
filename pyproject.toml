@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yourtube"
-version = "0.3.0"
+version = "0.4.0"
 description = "Better youtube recommendations"
 authors = ["Filip Sondej <filipsondej@protonmail.com>"]
 license = "LGPL-2.1"
@@ -17,6 +17,7 @@ ipyevents = "^2.0.1"
 voila = "^0.2.10"
 magic-wormhole = "^0.12.0"
 python-dateutil = "^2.8.2"
+krakow = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.13.0"

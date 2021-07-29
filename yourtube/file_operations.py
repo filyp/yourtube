@@ -38,9 +38,8 @@ graph format:
         "Liked videos" is
     from:
         playlist name that the video is from
-    watched_time:
-        time when the video has been watched
-        in unix time
+    watched_times:
+        list of times when the video has been watched, in unix time
         it is absent if the video hasn't been watched
     view_count:
         number of views on youtube
@@ -50,6 +49,9 @@ graph format:
     channel_id:
         id of the channel of this video
         can be None if the video is unavailable
+    is_down:
+        True if the video is unavailable
+        can be absent if the video is up or hasn't been scraped
 
     clusters:
         ...
@@ -123,6 +125,11 @@ def get_youtube_playlist_ids(playlist_name):
 
 
 def get_youtube_watched_ids():
+    """Returns a dictionary, where keys are video ids,
+    and each value is a list of times when this video has been watched (in unix time).
+
+    Unwatched videos aren't in this dictionary.
+    """
     with open(history_path) as file:
         lines = file.readlines()
     text = " ".join(lines)
@@ -134,4 +141,13 @@ def get_youtube_watched_ids():
 
     ids, timestamps, _ = zip(*watched)
     unixtimes = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-    return ids, unixtimes
+
+    id_set = set(ids)
+
+    id_to_watched_times = dict()
+    for id_ in id_set:
+        id_to_watched_times[id_] = []
+    for id_, watched_time in zip(ids, unixtimes):
+        id_to_watched_times[id_].append(watched_time)
+
+    return id_to_watched_times

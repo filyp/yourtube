@@ -2,7 +2,7 @@ import re
 import requests
 from time import time
 from tqdm import tqdm
-
+from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
 
 from yourtube.file_operations import (
     save_graph,
@@ -18,7 +18,7 @@ seconds_in_month = 60 * 60 * 24 * 30.4
 
 def get_content(id_):
     url = id_to_url.format(id_)
-    content = requests.get(url, cookies={"CONSENT": "YES+1"})
+    content = requests.get(url, cookies={"CONSENT": "YES+1"}, timeout=60)
     return content
 
 
@@ -31,12 +31,10 @@ def get_recommended_ids(content, id_):
 
 
 def get_title(content):
-    candidates = re.findall(r'title="(.*?)"', content.text)
-    candidates = set(candidates)
-    if "YouTube" in candidates:
-        candidates.remove("YouTube")
+    text = content.text.replace("\n", " ")
+    candidates = re.findall(r"<title>(.*?) - YouTube</title>", text)
     assert len(candidates) == 1
-    title = candidates.pop()
+    title = candidates[0]
     return title
 
 
@@ -61,8 +59,11 @@ def get_like_count(content):
         # likes are probably disabled
         return None
     like_string = like_string.replace("\xa0", "")
-    like_count = re.findall(r"[0-9]+", like_string)[0]
-    return int(like_count)
+    like_count = re.findall(r"[0-9]+", like_string)
+    if like_count == []:
+        # there are no likes
+        return 0
+    return int(like_count[0])
 
 
 def get_channel_id(content):
@@ -77,11 +78,13 @@ def get_channel_id(content):
     return channel_id
 
 
-def scrape(id_, G):
-    content = get_content(id_)
+def scrape_content(content, id_, G):
     recs = get_recommended_ids(content, id_)
     if not recs:
         # this video is probably removed from youtube
+        # TODO maybe the node should be removed too
+        G.add_node(id_)
+        G.nodes[id_]["is_down"] = True
         return
     for rec in recs:
         G.add_edge(id_, rec)
@@ -92,37 +95,54 @@ def scrape(id_, G):
         G.nodes[id_]["like_count"] = get_like_count(content)
         G.nodes[id_]["channel_id"] = get_channel_id(content)
         G.nodes[id_]["time_scraped"] = time()
-    except:
+    except Exception:
         print("\n\nscraping failed for video: ", id_)
         raise
 
 
-def scrape_from_list(ids_to_add, G, skip_if_fresher_than=None):
+def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
     """
     Scrapes videos from the ids_to_add list and adds them to graph G
 
     skip_if_fresher_than is in seconds
-    if set, videos scraped earlier than this time will be skipped
+    if set, videos scraped more recently than this time will be skipped
     """
-    print(f"adding {len(ids_to_add)} nodes")
+    # decide which videos to skip
+    ids_to_scrape = []
+    for id_ in ids:
+        if id_ in G.nodes:
+            node = G.nodes[id_]
+            # check if this video is down
+            if "is_down" in node and node["is_down"]:
+                continue
+            # check if this video was already scraped recently
+            if (
+                skip_if_fresher_than is not None
+                and "time_scraped" in node
+                and time() - node["time_scraped"] < skip_if_fresher_than
+            ):
+                continue
+        ids_to_scrape.append(id_)
 
-    skipped = 0
-    for id_ in tqdm(ids_to_add, ncols=80):
-        # check if this video was already scraped recently
-        if (
-            skip_if_fresher_than is not None
-            and id_ in G.nodes
-            and "time_scraped" in G.nodes[id_]
-            and time() - G.nodes[id_]["time_scraped"] < skip_if_fresher_than
+    if not non_verbose:
+        print(f"skipped {len(ids) - len(ids_to_scrape)} videos")
+
+    with ProcessPoolExecutor(max_workers=5) as executor:
+        future_to_id = {executor.submit(get_content, id_): id_ for id_ in ids_to_scrape}
+        for future in tqdm(
+            as_completed(future_to_id),
+            total=len(ids_to_scrape),
+            ncols=80,
+            smoothing=0.05,
+            disable=non_verbose,
         ):
-            skipped += 1
-            continue
-
-        # TODO maybe omit videos where title is None
-        # they are down but are tried do to be scraped every time
-        scrape(id_, G)
-
-    print(f"skipped {skipped} videos")
+            id_ = future_to_id[future]
+            try:
+                content = future.result()
+            except Exception as ex:
+                print("thread generated an exception: %s" % (ex))
+                continue
+            scrape_content(content, id_, G)
 
 
 def only_added_in_last_n_years(ids_to_add, times_added, n=5):
@@ -175,21 +195,20 @@ def scrape_all_playlists(years=5):
     save_graph(G)
 
 
-def scrape_watched(years=5):
+def scrape_watched():
     G = load_graph()
 
     try:
-        ids_to_add, watched_times = get_youtube_watched_ids()
-        ids_to_add, watched_times = only_added_in_last_n_years(
-            ids_to_add, watched_times, n=years
-        )
+        id_to_watched_times = get_youtube_watched_ids()
+        # it looks that in watched videos, there are only stored watches from the last 5 years
 
+        ids_to_add = id_to_watched_times.keys()
         scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
         # add data about the time they were added
-        for id_, watched_time in zip(ids_to_add, watched_times):
+        for id_, watched_times in id_to_watched_times.items():
             if id_ in G:
-                G.nodes[id_]["watched_time"] = watched_time
+                G.nodes[id_]["watched_times"] = watched_times
     except:
         save_graph(G)
         print("We crashed. Saving the graph...")
