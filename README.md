@@ -1,5 +1,11 @@
 # YourTube
 
+![build](https://github.com/filyp/YourTube/actions/workflows/build.yml/badge.svg)
+[![Downloads](https://pepy.tech/badge/yourtube)](https://pepy.tech/project/yourtube)
+[![CodeFactor](https://www.codefactor.io/repository/github/filyp/yourtube/badge)](https://www.codefactor.io/repository/github/filyp/yourtube)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+
 Better youtube recommendations
 
 - [x] More autonomy when choosing what to watch
