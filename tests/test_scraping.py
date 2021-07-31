@@ -34,6 +34,14 @@ def test_scraping_time_scraped():
     assert time() - 3600 < G.nodes[id_]["time_scraped"] < time()
 
 
+def test_scraping_category():
+    assert G.nodes[id_]["category"] == "Music"
+
+
+def test_scraping_length():
+    assert G.nodes[id_]["length"] == 212
+
+
 def test_title_special_chars():
     content = get_content("gmxSGVQEXuc")
     title = get_title(content)

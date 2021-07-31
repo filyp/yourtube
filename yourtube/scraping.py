@@ -84,6 +84,22 @@ def get_channel_id(content):
     return channel_id
 
 
+def get_category(content):
+    candidates = re.findall(r'"category":"(.*?)"', content.text)
+    candidates = set(candidates)
+    assert len(candidates) == 1
+    category = candidates.pop()
+    return category
+
+
+def get_length(content):
+    candidates = re.findall(r'"videoDetails":.*?"lengthSeconds":"(.*?)"', content.text)
+    candidates = set(candidates)
+    assert len(candidates) == 1
+    length = candidates.pop()
+    return int(length)
+
+
 def scrape_content(content, id_, G):
     recs = get_recommended_ids(content, id_)
     if not recs:
@@ -100,6 +116,8 @@ def scrape_content(content, id_, G):
         G.nodes[id_]["view_count"] = get_view_count(content)
         G.nodes[id_]["like_count"] = get_like_count(content)
         G.nodes[id_]["channel_id"] = get_channel_id(content)
+        G.nodes[id_]["category"] = get_category(content)
+        G.nodes[id_]["length"] = get_length(content)
         G.nodes[id_]["time_scraped"] = time()
     except Exception:
         print("\n\nscraping failed for video: ", id_)

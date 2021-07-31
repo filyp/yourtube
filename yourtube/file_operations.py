@@ -49,9 +49,14 @@ graph format:
     channel_id:
         id of the channel of this video
         can be None if the video is unavailable
+    category:
+        category of the video
+    length:
+        video length in seconds
     is_down:
         True if the video is unavailable
         can be absent if the video is up or hasn't been scraped
+
 
     clusters:
         ...
