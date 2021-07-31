@@ -1,10 +1,23 @@
 import networkx as nx
 from time import time
 
+from yourtube import __version__
 from yourtube.scraping import scrape_from_list, get_content, get_title
 
 id_ = "dQw4w9WgXcQ"
 G = nx.DiGraph()
+
+
+def test_version():
+    with open("pyproject.toml") as file:
+        lines = file.readlines()
+    for line in lines:
+        if "version = " in line:
+            version = line.replace("version = ", "")
+            version = version.replace('"', "")
+            version = version.replace("\n", "")
+            break
+    assert __version__ == version
 
 
 def test_scraping():
