@@ -2,31 +2,9 @@ import networkx as nx
 from time import time
 
 from yourtube.scraping import scrape_from_list, get_content, get_title
-import re
 
 id_ = "dQw4w9WgXcQ"
 G = nx.DiGraph()
-
-
-def test_test():
-    content = get_content(id_)
-
-    candidates = re.findall(
-        r'{"iconType":"LIKE"},"defaultText":{"accessibility":{"accessibilityData":{"label":"(.*?)"',
-        content.text,
-    )
-    candidates = set(candidates)
-    assert len(candidates) <= 1
-    if candidates:
-        like_string = candidates.pop()
-    else:
-        # likes are probably disabled
-        return None
-    print(like_string)
-    like_string = like_string.replace("\xa0", "")
-    print(like_string)
-    like_count = re.findall(r"[0-9]+", like_string)
-    print(like_count)
 
 
 def test_scraping():

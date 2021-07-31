@@ -64,6 +64,7 @@ def get_like_count(content):
         # likes are probably disabled
         return None
     like_string = like_string.replace("\xa0", "")
+    like_string = like_string.replace(",", "")
     like_count = re.findall(r"[0-9]+", like_string)
     if like_count == []:
         # there are no likes
