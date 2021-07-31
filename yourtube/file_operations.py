@@ -53,6 +53,8 @@ graph format:
         category of the video
     length:
         video length in seconds
+    keywords:
+        keywords of the video
     is_down:
         True if the video is unavailable
         can be absent if the video is up or hasn't been scraped
