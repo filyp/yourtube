@@ -103,7 +103,10 @@ def get_length(content):
 def get_keywords(content):
     candidates = re.findall(r'"keywords":\[(.*?)\]', content.text)
     candidates = set(candidates)
-    assert len(candidates) == 1
+    assert len(candidates) <= 1
+    if len(candidates) == 0:
+        # there are no keywords
+        return []
     keywords = candidates.pop()
     keywords = keywords.replace('"', "")
     keywords = keywords.split(",")

@@ -54,7 +54,8 @@ graph format:
     length:
         video length in seconds
     keywords:
-        keywords of the video
+        keywords of the video as a list of strings
+        can be an empty list if there are no keywords
     is_down:
         True if the video is unavailable
         can be absent if the video is up or hasn't been scraped
