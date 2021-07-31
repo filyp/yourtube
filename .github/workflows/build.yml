@@ -33,4 +33,4 @@ jobs:
     - name: Test with pytest
       run: |
         source $HOME/.poetry/env
-        poetry run pytest .
+        poetry run pytest -s .
