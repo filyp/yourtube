@@ -30,4 +30,5 @@ jobs:
     - name: Publish
       run: |
         source $HOME/.poetry/env
-        poetry publish --build --client-cert ${{ secrets.PYPI_TOKEN }}
+        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        poetry publish --build
