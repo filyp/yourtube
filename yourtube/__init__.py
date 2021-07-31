@@ -5,7 +5,7 @@ import subprocess
 import pathlib
 
 dir_ = pathlib.Path(__file__).parent.resolve()
-app_path = os.path.join(dir_, "UI.ipynb")
+app_path = os.path.join(dir_, "YourTube.ipynb")
 
 
 def run():

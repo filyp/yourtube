@@ -35,6 +35,11 @@ def get_title(content):
     candidates = re.findall(r"<title>(.*?) - YouTube</title>", text)
     assert len(candidates) == 1
     title = candidates[0]
+
+    # make title human readable
+    title = title.replace("&#39;", "'")
+    title = title.replace("&amp;", "&")
+    title = title.replace("&quot;", '"')
     return title
 
 

@@ -1,7 +1,7 @@
 import networkx as nx
 from time import time
 
-from yourtube.scraping import scrape_from_list
+from yourtube.scraping import scrape_from_list, get_content, get_title
 
 id_ = "dQw4w9WgXcQ"
 G = nx.DiGraph()
@@ -32,3 +32,9 @@ def test_scraping_channel_id():
 
 def test_scraping_time_scraped():
     assert time() - 3600 < G.nodes[id_]["time_scraped"] < time()
+
+
+def test_title_special_chars():
+    content = get_content("gmxSGVQEXuc")
+    title = get_title(content)
+    assert title == """test"&ŒœŠšŸˆ˜   –—‘’‚“”„†‡‰‹›€~!@#$%^&*()_+[]{};'\\:"|,./?"""
