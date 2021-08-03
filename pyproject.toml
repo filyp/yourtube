@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yourtube"
-version = "0.5.3"
+version = "0.5.4"
 description = "Better youtube recommendations"
 authors = ["Filip Sondej <filipsondej@protonmail.com>"]
 license = "LGPL-2.1"

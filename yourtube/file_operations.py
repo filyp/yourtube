@@ -43,7 +43,7 @@ graph format:
         it is absent if the video hasn't been watched
     view_count:
         number of views on youtube
-        can be None if the video is premium (so the views are hidden)
+        can be None if the video is premium (so the views are ambiguous)
     like_count:
         number of likes on youtube
         can be None if likes are disabled
@@ -54,6 +54,7 @@ graph format:
         category of the video
     length:
         video length in seconds
+        can be None if the video is premium (so the views are ambiguous)
     keywords:
         keywords of the video as a list of strings
         can be an empty list if there are no keywords
