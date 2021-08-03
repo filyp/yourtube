@@ -43,6 +43,7 @@ graph format:
         it is absent if the video hasn't been watched
     view_count:
         number of views on youtube
+        can be None if the video is premium (so the views are hidden)
     like_count:
         number of likes on youtube
         can be None if likes are disabled

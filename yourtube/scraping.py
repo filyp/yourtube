@@ -46,9 +46,13 @@ def get_title(content):
 def get_view_count(content):
     candidates = re.findall(r'"viewCount":"([0-9]+)"', content.text)
     candidates = set(candidates)
-    assert len(candidates) == 1
-    view_count = candidates.pop()
-    return int(view_count)
+    assert len(candidates) <= 1
+    if candidates:
+        view_count = candidates.pop()
+        return int(view_count)
+    else:
+        # view count is absent for example in premium videos
+        return None
 
 
 def get_like_count(content):
