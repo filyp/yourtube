@@ -93,7 +93,14 @@ def load_graph(graph_name="graph"):
 
 def get_playlist_names():
     for filename in os.listdir(playlists_path):
-        yield re.match(r"(.*)\.csv", filename)[1]
+        match = re.match(r"(.*)\.csv", filename)
+        if match is not None:
+            yield match[1]
+        else:
+            # it looks that playlists with a dot in their filename don't have '.csv' at the end
+            abs_filename = os.path.join(playlists_path, filename)
+            os.rename(abs_filename, abs_filename + ".csv")
+            yield filename
 
 
 def get_freetube_favorites_ids():
@@ -138,7 +145,7 @@ def get_youtube_watched_ids():
 
     Unwatched videos aren't in this dictionary.
     """
-    with open(history_path) as file:
+    with open(history_path, encoding="utf-8") as file:
         lines = file.readlines()
     text = " ".join(lines)
 
