@@ -3,6 +3,11 @@ import requests
 from time import time
 from tqdm import tqdm
 from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
+from youtube_transcript_api import (
+    YouTubeTranscriptApi,
+    TranscriptsDisabled,
+    NoTranscriptFound,
+)
 
 from yourtube.file_operations import (
     save_graph,
@@ -11,15 +16,24 @@ from yourtube.file_operations import (
     get_playlist_names,
     get_youtube_playlist_ids,
     get_youtube_watched_ids,
+    get_transcripts_db,
 )
 
-seconds_in_month = 60 * 60 * 24 * 30.4
+seconds_in_day = 60 * 60 * 24
+seconds_in_month = seconds_in_day * 30.4
 
 
 def get_content(id_):
     url = id_to_url.format(id_)
     content = requests.get(url, cookies={"CONSENT": "YES+1"}, timeout=60)
     return content
+
+
+def get_transript(id_):
+    try:
+        return YouTubeTranscriptApi.get_transcript(id_)
+    except (TranscriptsDisabled, NoTranscriptFound):
+        return None
 
 
 def get_recommended_ids(content, id_):
@@ -92,6 +106,7 @@ def get_category(content):
     candidates = set(candidates)
     assert len(candidates) == 1
     category = candidates.pop()
+    category = category.replace("\\u0026", "&")
     return category
 
 
@@ -205,13 +220,13 @@ def only_added_in_last_n_years(ids_to_add, times_added, n=5):
     return filtered_ids_to_add, filtered_times_to_add
 
 
-def scrape_playlist(playlist_name, G, years=5):
+def scrape_playlist(playlist_name, G, years=5, skip_if_fresher_than=seconds_in_month):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
     ids_to_add, times_added = only_added_in_last_n_years(
         ids_to_add, times_added, n=years
     )
 
-    scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
+    scrape_from_list(ids_to_add, G, skip_if_fresher_than=skip_if_fresher_than)
 
     # add data about the time they were added
     for id_, time_added in zip(ids_to_add, times_added):
@@ -230,7 +245,9 @@ def scrape_all_playlists(years=5):
         for playlist_name in get_playlist_names():
             print()
             print("scraping: ", playlist_name)
-            scrape_playlist(playlist_name, G, years=years)
+            scrape_playlist(
+                playlist_name, G, years=years, skip_if_fresher_than=seconds_in_day
+            )
     except:
         save_graph(G)
         print("We crashed. Saving the graph...")
@@ -244,7 +261,7 @@ def scrape_watched():
 
     try:
         id_to_watched_times = get_youtube_watched_ids()
-        # it looks that in watched videos, there are only stored watches from the last 5 years
+        # note: it looks that in watched videos, there are only stored watches from the last 5 years
 
         ids_to_add = id_to_watched_times.keys()
         scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
@@ -259,3 +276,32 @@ def scrape_watched():
         raise
 
     save_graph(G)
+
+
+def scrape_transcripts_from_watched_videos():
+    # note that already scraped videos won't be skipped
+    # as is the case with other scraping functions
+    # also no saving db in case of some failure
+    id_to_watched_times = get_youtube_watched_ids()
+    # note: it looks that in watched videos, there are only stored watches from the last 5 years
+    ids = id_to_watched_times.keys()
+
+    transcripts_db = get_transcripts_db()
+
+    with ProcessPoolExecutor(max_workers=5) as executor:
+        future_to_id = {executor.submit(get_transript, id_): id_ for id_ in ids}
+        for future in tqdm(
+            as_completed(future_to_id),
+            total=len(ids),
+            ncols=80,
+            smoothing=0.05,
+        ):
+            id_ = future_to_id[future]
+            try:
+                transcript = future.result()
+            except Exception as ex:
+                print("thread generated an exception: %s" % (ex))
+                continue
+            transcripts_db[id_] = transcript
+
+    transcripts_db.dump()

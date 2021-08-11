@@ -4,6 +4,7 @@ import csv
 import json
 import pickle
 import datetime
+import pickledb
 import networkx as nx
 from time import time, mktime
 from dateutil import parser
@@ -12,6 +13,7 @@ id_to_url = "https://www.youtube.com/watch?v={}"
 
 home = os.path.expanduser("~")
 graph_path_template = os.path.join(home, ".yourtube", "{}.pickle")
+transcripts_path = os.path.join(home, ".yourtube", "transcripts.json")
 playlists_path = os.path.join(
     home, ".yourtube/Takeout/YouTube and YouTube Music/playlists"
 )
@@ -91,6 +93,10 @@ def load_graph(graph_name="graph"):
     else:
         print("graph created")
         return nx.DiGraph()
+
+
+def get_transcripts_db():
+    return pickledb.load(transcripts_path, auto_dump=False)
 
 
 def get_playlist_names():
