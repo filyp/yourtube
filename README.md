@@ -10,9 +10,9 @@ Better youtube recommendations
 
 - [x] More autonomy when choosing what to watch
 - [x] Completely private
+- [x] Highly customizable
 - [ ] Less clickbait
 - [ ] Recommendations for two or more people
-- [ ] Highly customizable
 - [ ] Freetube integration
 - [ ] Sharing and browsing information bubbles
 
