@@ -6,7 +6,7 @@ authors = ["Filip Sondej <filipsondej@protonmail.com>"]
 license = "LGPL-2.1"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.10"
+python = ">=3.8,<3.10"
 networkx = "^2.6.1"
 tqdm = "^4.61.2"
 requests = "^2.26.0"

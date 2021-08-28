@@ -16,6 +16,8 @@ Better youtube recommendations
 - [ ] Freetube integration
 - [ ] Sharing and browsing information bubbles
 
+You can play with the demo [here](193.19.165.86:8866). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
+
 
 ## Installation
 
