@@ -136,7 +136,7 @@ def get_keywords(content):
 
 def scrape_content(content, id_, G):
     recs = get_recommended_ids(content, id_)
-    if not recs:
+    if len(recs) <= 1:
         # this video is probably removed from youtube
         # TODO maybe the node should be removed too
         G.add_node(id_)
