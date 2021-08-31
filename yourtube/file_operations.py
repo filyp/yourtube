@@ -88,7 +88,7 @@ def load_graph(graph_name="graph"):
     graph_path = graph_path_template.format(graph_name)
     # load or create a Graph
     if os.path.isfile(graph_path):
-        print("graph loaded")
+        # print("graph loaded")
         with open(graph_path, "rb") as handle:
             return pickle.load(handle)
     else:

@@ -9,14 +9,14 @@
 Better youtube recommendations
 
 - [x] More autonomy when choosing what to watch
-- [x] Completely private
-- [ ] Highly customizable
+- [x] Complxtely private
+- [x] Highly customizable
 - [ ] Less clickbait
 - [ ] Recommendations for two or more people
 - [ ] Freetube integration
 - [ ] Sharing and browsing information bubbles
 
-You can play with the demo here: [193.19.165.86:8866](193.19.165.86:8866). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
+You can play with the demo here: [http://193.19.165.86:8866](http://193.19.165.86:8866). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
 
 
 ## Installation
@@ -55,3 +55,17 @@ Now, you can explore your recommendations by running:
 ```
 yourtube
 ```
+
+# Customization
+
+All the parameters can be set in URL query like this: 
+
+http://localhost:8866/?num_of_columns=3&videos_in_column=4&clustering_balance=1.4&recommendation_cutoff=0.7&width=1000
+
+or for the demo:
+
+http://193.19.165.86:8866/?num_of_columns=3&videos_in_column=4&clustering_balance=1.4&recommendation_cutoff=0.7&width=1000
+
+`recommendation_cutoff` must be between 0 and 1; the higher, the more predictable the recommendations; low values are good for content exploration
+
+`clustering_balance` must be greater or equal to 1, generally values between 1.3 and 2 are fine
