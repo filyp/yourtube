@@ -6,3 +6,4 @@ yourtube/failed/.ipynb_checkpoints
 .ipynb_checkpoints
 dist
 tests/__pycache__
+commit_message.txt

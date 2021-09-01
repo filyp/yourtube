@@ -10,7 +10,7 @@ Better youtube recommendations
 
 - [x] More autonomy when choosing what to watch
 - [x] Complxtely private
-- [x] Highly customizable
+- [x] Very customizable
 - [ ] Less clickbait
 - [ ] Recommendations for two or more people
 - [ ] Freetube integration
@@ -60,11 +60,11 @@ yourtube
 
 All the parameters can be set in URL query like this: 
 
-http://localhost:8866/?num_of_columns=3&videos_in_column=4&clustering_balance=1.4&recommendation_cutoff=0.7&width=1000
+http://localhost:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
 
 or for the demo:
 
-http://193.19.165.86:8866/?num_of_columns=3&videos_in_column=4&clustering_balance=1.4&recommendation_cutoff=0.7&width=1000
+http://193.19.165.86:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
 
 `recommendation_cutoff` must be between 0 and 1; the higher, the more predictable the recommendations; low values are good for content exploration
 
