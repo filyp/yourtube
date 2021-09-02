@@ -22,11 +22,11 @@ scipy = "^1.7.0"
 youtube-transcript-api = "^0.4.1"
 pickleDB = "^0.9.2"
 sklearn = "^0.0"
+ipyvuetify = "^1.8.1"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.13.0"
 ipykernel = "^6.0.2"
-nb-black = "^1.0.7"
 pytest = "^6.2.4"
 
 [build-system]
@@ -38,3 +38,6 @@ yourtube = 'yourtube.__init__:run'
 yourtube-scrape = 'yourtube.scraping:scrape_all_playlists'
 yourtube-scrape-watched = 'yourtube.scraping:scrape_watched'
 yourtube-scrape-transcripts = 'yourtube.scraping:scrape_transcripts_from_watched_videos'
+
+[tool.black]
+line-length = 100

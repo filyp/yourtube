@@ -3,6 +3,8 @@ import requests
 from time import time
 from tqdm import tqdm
 from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
+
+import numpy as np
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     TranscriptsDisabled,
@@ -104,7 +106,11 @@ def get_channel_id(content):
 def get_category(content):
     candidates = re.findall(r'"category":"(.*?)"', content.text)
     candidates = set(candidates)
-    assert len(candidates) == 1
+    assert 1 <= len(candidates) <= 2
+    if len(candidates) == 2:
+        assert candidates == {"Trailers", "Movies"}
+        # youtube movies have these two categories, so just say it's a movie
+        return "Movies"
     category = candidates.pop()
     category = category.replace("\\u0026", "&")
     return category
@@ -163,9 +169,18 @@ def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
     """
     Scrapes videos from the ids_to_add list and adds them to graph G
 
-    skip_if_fresher_than is in seconds
-    if set, videos scraped more recently than this time will be skipped
+    ids:
+        can be multidimensional, as long as it is convertible to numpy array
+        it can contain "" elements - they will be skipped
+    skip_if_fresher_than:
+        is in seconds
+        if set, videos scraped more recently than this time will be skipped
     """
+    # flatten
+    ids = np.array(ids).flatten()
+    # remove "" elements (they represent empty clusters)
+    ids = [id_ for id_ in ids if id_ != ""]
+
     # decide which videos to skip
     ids_to_scrape = []
     for id_ in ids:
@@ -186,7 +201,7 @@ def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
     if not non_verbose:
         print(f"skipped {len(ids) - len(ids_to_scrape)} videos")
 
-    with ProcessPoolExecutor(max_workers=5) as executor:
+    with ProcessPoolExecutor(max_workers=8) as executor:
         future_to_id = {executor.submit(get_content, id_): id_ for id_ in ids_to_scrape}
         for future in tqdm(
             as_completed(future_to_id),
@@ -222,9 +237,7 @@ def only_added_in_last_n_years(ids_to_add, times_added, n=5):
 
 def scrape_playlist(playlist_name, G, years=5, skip_if_fresher_than=seconds_in_month):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
-    ids_to_add, times_added = only_added_in_last_n_years(
-        ids_to_add, times_added, n=years
-    )
+    ids_to_add, times_added = only_added_in_last_n_years(ids_to_add, times_added, n=years)
 
     scrape_from_list(ids_to_add, G, skip_if_fresher_than=skip_if_fresher_than)
 
@@ -245,9 +258,7 @@ def scrape_all_playlists(years=5):
         for playlist_name in get_playlist_names():
             print()
             print("scraping: ", playlist_name)
-            scrape_playlist(
-                playlist_name, G, years=years, skip_if_fresher_than=seconds_in_day
-            )
+            scrape_playlist(playlist_name, G, years=years, skip_if_fresher_than=seconds_in_day)
     except:
         save_graph(G)
         print("We crashed. Saving the graph...")
@@ -263,7 +274,7 @@ def scrape_watched():
         id_to_watched_times = get_youtube_watched_ids()
         # note: it looks that in watched videos, there are only stored watches from the last 5 years
 
-        ids_to_add = id_to_watched_times.keys()
+        ids_to_add = list(id_to_watched_times.keys())
         scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
 
         # add data about the time they were added

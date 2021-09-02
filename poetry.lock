@@ -433,6 +433,28 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "ipyvue"
+version = "1.5.0"
+description = "Jupyter widgets base for Vue libraries"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+ipywidgets = ">=7.0.0"
+
+[[package]]
+name = "ipyvuetify"
+version = "1.8.1"
+description = "Jupyter widgets based on vuetify UI components"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+ipyvue = ">=1.5,<2"
+
+[[package]]
 name = "ipywidgets"
 version = "7.6.3"
 description = "IPython HTML widgets for Jupyter"
@@ -675,17 +697,6 @@ description = "The fastest markdown parser in pure Python"
 category = "main"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "nb-black"
-version = "1.0.7"
-description = "A simple extension for Jupyter Notebook and Jupyter Lab to beautify Python code automatically using Black."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-ipython = "*"
 
 [[package]]
 name = "nbclient"
@@ -1523,7 +1534,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "dfdfcf48e25fd6ea8d1f7a5bf3101a9fa23a57168088411d0faf4f475468c7b2"
+content-hash = "ac72a1af7ba4de25b30d872fbc5d49f730aab908e9e9981515e6b51eab3ddabe"
 
 [metadata.files]
 anyio = [
@@ -1800,6 +1811,14 @@ ipython-genutils = [
     {file = "ipython_genutils-0.2.0-py2.py3-none-any.whl", hash = "sha256:72dd37233799e619666c9f639a9da83c34013a73e8bbc79a7a6348d93c61fab8"},
     {file = "ipython_genutils-0.2.0.tar.gz", hash = "sha256:eb2e116e75ecef9d4d228fdc66af54269afa26ab4463042e33785b887c628ba8"},
 ]
+ipyvue = [
+    {file = "ipyvue-1.5.0-py2.py3-none-any.whl", hash = "sha256:10cb0631116100ae04bb1d228c25ae007d2edcfdb0a7f7b2f6611c0c3b27585b"},
+    {file = "ipyvue-1.5.0.tar.gz", hash = "sha256:e8549a7ac7dc45948a5f2735e17f97622313c7fea24ea3c1bd4a5ebf02bf5638"},
+]
+ipyvuetify = [
+    {file = "ipyvuetify-1.8.1-py2.py3-none-any.whl", hash = "sha256:1bbe9258243557e3b17ddab2c474036429f01675dec1d9ade479468e25587feb"},
+    {file = "ipyvuetify-1.8.1.tar.gz", hash = "sha256:2d17367ce7da45a2622107d55c8b4c5475aace99ed5d95e5d7d3f93aa4c0c566"},
+]
 ipywidgets = [
     {file = "ipywidgets-7.6.3-py2.py3-none-any.whl", hash = "sha256:e6513cfdaf5878de30f32d57f6dc2474da395a2a2991b94d487406c0ab7f55ca"},
     {file = "ipywidgets-7.6.3.tar.gz", hash = "sha256:9f1a43e620530f9e570e4a493677d25f08310118d315b00e25a18f12913c41f0"},
@@ -1946,9 +1965,6 @@ matplotlib-inline = [
 mistune = [
     {file = "mistune-0.8.4-py2.py3-none-any.whl", hash = "sha256:88a1051873018da288eee8538d476dffe1262495144b33ecb586c4ab266bb8d4"},
     {file = "mistune-0.8.4.tar.gz", hash = "sha256:59a3429db53c50b5c6bcc8a07f8848cb00d7dc8bdb431a4ab41920d201d4756e"},
-]
-nb-black = [
-    {file = "nb_black-1.0.7.tar.gz", hash = "sha256:1ca52e3a46675f6a0a6d79ac73a1f8f951bef60f919eced56173e76ab1b6d62b"},
 ]
 nbclient = [
     {file = "nbclient-0.5.3-py3-none-any.whl", hash = "sha256:e79437364a2376892b3f46bedbf9b444e5396cfb1bc366a472c37b48e9551500"},
