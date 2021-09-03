@@ -1,4 +1,4 @@
-__version__ = "0.6.1"
+__version__ = "0.7.0"
 
 import os
 import subprocess
@@ -11,4 +11,4 @@ app_path = os.path.join(dir_, "YourTube.ipynb")
 def run():
     # TODO once poetry-core 1.1.0 drops, this could be made more elegantly, directly with a bash script
     # or maybe directly calling voila?
-    subprocess.run(["voila", "--theme=dark", app_path])
+    subprocess.run(["voila", "--theme=dark", "--show_tracebacks=True", app_path])

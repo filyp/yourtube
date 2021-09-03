@@ -69,3 +69,31 @@ http://193.19.165.86:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=
 `recommendation_cutoff` must be between 0 and 1; the higher, the more predictable the recommendations; low values are good for content exploration
 
 `clustering_balance` must be greater or equal to 1, generally values between 1.3 and 2 are fine
+
+# FAQ
+
+<details>
+  <summary>How does it work?</summary>
+  
+- For every video you have liked on youtube, its recommended videos are collected. 
+- This way, we create a graph, where two videos are connected if one recomends the other. 
+- Now we divide this graph into clusters (groups of videos around common theme). For example we can have a  `folk rock` cluster, or a `science podcasts` cluster or a `travel vlogs` cluster.
+- Small clusters are a part of larger clusters. For example `folk rock` and `boomer rock` are inside of `rock` cluster, and `rock` is inside `music`. 
+- This forms a tree, with big branches (like `music`), splitting into smaller and smaller branches and twigs.
+- Now, to choose what to watch you can at the trunk, and "climb" this tree, by choosing which branch to go into.
+- Note, that some clusters are too big to be clearly labeled, but by looking at the videos in them, you can usually get a general idea about what a cluser is about.
+</details>
+
+<details>
+  <summary>How are the clusters found?</summary>
+
+- When a group of videos is densely connected, it's assumed do be a cluster. When two clusters are well connected, they are joined into a bigger cluster. The exact method we use is [here](https://github.com/filyp/krakow).
+</details>
+
+<details>
+  <summary>Why rely on youtube recommendations instead of providing our own and having more control over them?</summary>
+
+- Creating a recommender system from scratch is much harder than you may think at first. In addition to having accurate recommendations, you also have to defend against attacks, like click farms trying to boost some content, or intelligence agencies spreading misinformation. You also have to detect illegal or NSFL stuff, and filter it out. See [this](https://www.youtube.com/watch?v=1PGm8LslEb4) to get a sense of how hard this is.
+- Another critical problem is the network effect. To build a good recommender system, we need data from a lot of users. To have a lot of users, the recommender system must be good.
+- For these reasons, it's better to start with an existing recomender system as a "bottom layer", and then build any new features we want, on top of it. 
+</details>
