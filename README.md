@@ -80,8 +80,8 @@ http://193.19.165.86:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=
 - Now we divide this graph into clusters (groups of videos around common theme). For example we can have a  `folk rock` cluster, or a `science podcasts` cluster or a `travel vlogs` cluster.
 - Small clusters are a part of larger clusters. For example `folk rock` and `boomer rock` are inside of `rock` cluster, and `rock` is inside `music`. 
 - This forms a tree, with big branches (like `music`), splitting into smaller and smaller branches and twigs.
-- Now, to choose what to watch you can at the trunk, and "climb" this tree, by choosing which branch to go into.
-- Note, that some clusters are too big to be clearly labeled, but by looking at the videos in them, you can usually get a general idea about what a cluser is about.
+- Now, to choose what to watch you can start at the trunk, and "climb" this tree, by choosing which branch to go into.
+- Note, that some clusters are too big to be clearly labeled, but by looking at the videos in them, you can usually get a general idea about this cluster's theme.
 </details>
 
 <details>
@@ -94,6 +94,6 @@ http://193.19.165.86:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=
   <summary>Why rely on youtube recommendations instead of providing our own and having more control over them?</summary>
 
 - Creating a recommender system from scratch is much harder than you may think at first. In addition to having accurate recommendations, you also have to defend against attacks, like click farms trying to boost some content, or intelligence agencies spreading misinformation. You also have to detect illegal or NSFL stuff, and filter it out. See [this](https://www.youtube.com/watch?v=1PGm8LslEb4) to get a sense of how hard this is.
-- Another critical problem is the network effect. To build a good recommender system, we need data from a lot of users. To have a lot of users, the recommender system must be good.
+- Another critical problem is the network effect. To build a good recommender system, we need data from a lot of users. To have a lot of users, we need a good recommender system.
 - For these reasons, it's better to start with an existing recomender system as a "bottom layer", and then build any new features we want, on top of it. 
 </details>
