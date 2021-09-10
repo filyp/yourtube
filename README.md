@@ -16,7 +16,7 @@ Better youtube recommendations
 - [ ] Freetube integration
 - [ ] Sharing and browsing information bubbles
 
-You can play with the demo here: [yourtube.quest](http://193.19.165.86:8866). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
+You can play with the demo [here](http://yourtube.quest). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
 
 # FAQ
 
@@ -91,7 +91,7 @@ http://localhost:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&
 
 or for the demo:
 
-yourtube.quest/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
+http://yourtube.quest/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
 
 `recommendation_cutoff` must be between 0 and 1; the higher, the more predictable the recommendations; low values are good for content exploration
 
