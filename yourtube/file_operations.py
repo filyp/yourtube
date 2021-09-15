@@ -1,12 +1,12 @@
-import os
-import re
 import csv
 import json
+import os
 import pickle
-import datetime
-import pickledb
+import re
+from time import mktime
+
 import networkx as nx
-from time import time, mktime
+import pickledb
 from dateutil import parser
 
 id_to_url = "https://www.youtube.com/watch?v={}"
@@ -15,9 +15,7 @@ home = os.path.expanduser("~")
 graph_path_template = os.path.join(home, ".yourtube", "{}.pickle")
 cluster_cache_path = os.path.join(home, ".yourtube", "cluster_cache.db")
 transcripts_path = os.path.join(home, ".yourtube", "transcripts.json")
-playlists_path = os.path.join(
-    home, ".yourtube/Takeout/YouTube and YouTube Music/playlists"
-)
+playlists_path = os.path.join(home, ".yourtube/Takeout/YouTube and YouTube Music/playlists")
 history_path = os.path.join(
     home, ".yourtube/Takeout/YouTube and YouTube Music/history/watch-history.html"
 )

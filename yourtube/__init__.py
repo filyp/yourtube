@@ -1,8 +1,8 @@
 __version__ = "0.7.0"
 
 import os
-import subprocess
 import pathlib
+import subprocess
 
 dir_ = pathlib.Path(__file__).parent.resolve()
 app_path = os.path.join(dir_, "YourTube.ipynb")

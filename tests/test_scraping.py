@@ -1,8 +1,9 @@
-import networkx as nx
 from time import time
 
+import networkx as nx
+
 from yourtube import __version__
-from yourtube.scraping import scrape_from_list, get_content, get_title
+from yourtube.scraping import get_content, get_title, scrape_from_list
 
 id_ = "dQw4w9WgXcQ"
 G = nx.DiGraph()
@@ -25,10 +26,7 @@ def test_scraping():
 
 
 def test_scraping_title():
-    assert (
-        G.nodes[id_]["title"]
-        == "Rick Astley - Never Gonna Give You Up (Official Music Video)"
-    )
+    assert G.nodes[id_]["title"] == "Rick Astley - Never Gonna Give You Up (Official Music Video)"
 
 
 def test_scraping_view_count():
