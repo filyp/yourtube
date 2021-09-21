@@ -7,3 +7,4 @@ yourtube/junkyard/.ipynb_checkpoints
 dist
 tests/__pycache__
 commit_message.txt
+.vscode
