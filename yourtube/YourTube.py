@@ -5,43 +5,37 @@
 
 import functools
 import hashlib
-import logging
-import os
 import random
 import shelve
-import sys
 from threading import Thread
 from time import sleep, time
 
-import ipyvuetify as v
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import panel as pn
 from IPython.core.display import HTML, display
-from IPython.display import Javascript
-from ipywidgets import Button, Checkbox, HBox, Image, Layout, Output, VBox
 from krakow import krakow
 from krakow.utils import normalized_dasgupta_cost, split_into_n_children
 from scipy.cluster.hierarchy import cut_tree, leaves_list, to_tree
 
-# TODO this line probably needs to be replaced by PYTHONPATH anyway
-sys.path.append(os.path.abspath(".."))
-
 plt.style.use("dark_background")
-v.theme.dark = True
 
 pn.extension()
 # pn.extension(template='vanilla')
 # pn.extension(template='material', theme='dark')
 # pn.extension('ipywidgets')
 
-
 from yourtube.file_operations import (
     cluster_cache_path,
     id_to_url,
     load_graph,
     save_graph,
+)
+from yourtube.material_components import (
+    MaterialButton,
+    MaterialSwitch,
+    required_modules,
 )
 from yourtube.scraping import scrape_from_list
 
@@ -343,108 +337,65 @@ class UI:
 
         self.recommender = Recommender(G, recommendation_cutoff, seed)
 
-        self.image_output = Output()
         self.message_output = pn.pane.HTML('<div id="header" style="width:800px;"></div>')
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         # TODO note that vertical is currently broken!
 
-        # a terrible hack to make panel click button only once
-        # TODO a bug should be reported to ipywidgets_bokeh
-        self.last_time_something_was_clicked = 0
-
         # define UI controls
-        go_back_button = v.Btn(class_="ma-4", children=["Go back"])
-        go_back_button.on_event("click", self.go_back)
-
-        self.hide_watched_checkbox = v.Switch(label="Hide watched", value=1, v_model=[])
-        self.hide_watched_checkbox.observe(
-            self.update_displayed_videos_without_cache, names="v_model"
+        go_back_button = MaterialButton(
+            label="Go back",
+            on_click=self.go_back,
+            style="width: 110px",
+        )
+        self.hide_watched_checkbox = MaterialSwitch(initial_value=False, width=40)
+        self.hide_watched_checkbox.on_event(
+            "switch_id", "click", self.update_displayed_videos_without_cache
         )
 
-        self.use_watched_checkbox = v.Switch(
-            label="Use watched videos for clustering", value=1, v_model=[]
+        top = pn.Row(
+            go_back_button,
+            pn.Spacer(width=20),
+            self.hide_watched_checkbox,
+            pn.pane.HTML("Hide watched videos"),
+            required_modules,
         )
-        if len(list(added_in_last_n_years(G, G.nodes))) < 400:
-            # if there are too few videos in playlists, it's better to also use watched videos
-            self.use_watched_checkbox.v_model = [1]
-        self.use_watched_checkbox.observe(self.recluster, names="v_model")
 
-        #         # construct group choice buttons
-        #         # the last part can be simplified
-        #         if self.orientation == "vertical":
-        #             button_text = "⮟"
-        #             buttons_style = f"height: 60px; width: {self.column_width}px; opacity: 1"
-        #         elif self.orientation == "horizontal":
-        #             button_height = self.column_width * 9 // 16
-        #             button_text = "➤"
-        #             buttons_style = f"height: {button_height}px; width: 60px; opacity: 1"
-        #         self.choice_buttons = []
-        #         for i in range(self.num_of_groups):
-        #             func = functools.partial(self.choose_column, i=i)
-        #             button = v.Btn(children=[button_text], style_=buttons_style)
-        #             button.on_event("click", func)
-        #             self.choice_buttons.append(button)
-        #         if self.orientation == "vertical":
-        #             self.choice_buttons = v.Html(
-        #                 tag="div",
-        #                 class_="d-flex flex-row",
-        #                 children=self.choice_buttons,
-        #                 style_=f"gap: {self.grid_gap}px;",
-        #             )
-        #         elif self.orientation == "horizontal":
-        #             self.choice_buttons = v.Html(
-        #                 tag="div",
-        #                 class_="d-flex flex-column",
-        #                 children=self.choice_buttons,
-        #                 style_=f"gap: {self.row_height - button_height + self.grid_gap}px;",
-        #             )
+        # if there are too few videos in playlists, it's better to also use watched videos
+        self.use_watched = len(list(added_in_last_n_years(G, G.nodes))) < 400
 
-        # revert to the ipywidgets buttons
+        # conscruct group choice buttons
         if self.orientation == "vertical":
-            layout = Layout(width=f"{self.column_width}px", height="60px")
-            description = "⮟"
+            # TODO vertical layout
+            label = "⮟"
         elif self.orientation == "horizontal":
             button_height = self.column_width * 9 // 16
-            layout = Layout(height=f"{button_height}px", width="60px")
-            description = "➤"
-        self.choice_buttons = [
-            Button(description=description, layout=layout) for _ in range(self.num_of_groups)
-        ]
-        for i, button in enumerate(self.choice_buttons):
-            func = functools.partial(self.choose_column, i=i)
-            button.on_click(func)
-        button_layout = Layout(grid_gap=f"{self.row_height - button_height + self.grid_gap - 4}px")
-        button_box = VBox(self.choice_buttons, layout=button_layout)
+            style = f"height: {button_height}px; width: 60px"
+            label = "➤"
+            button_gap = int(self.row_height - button_height)
+        self.choice_buttons = []
+        button_box = pn.Column()
+        for i in range(self.num_of_groups):
+            button = MaterialButton(label=label, style=style)
+            # bind this button to its column choice
+            button.on_click = functools.partial(self.choose_column, i=i)
 
-        # build UI
-        top = v.Html(
-            tag="div",
-            class_="d-flex flex-row",
-            style_="gap: 60px; ",
-            children=[
-                go_back_button,
-                self.hide_watched_checkbox,
-                # self.use_watched_checkbox,  # TODO put this control in a sidebar
-            ],
-        )
+            self.choice_buttons.append(button)
+            # construct button box
+            button_box.append(button)
+            button_box.append(pn.Spacer(height=button_gap))
+        # pop the last spacer
+        button_box.pop(-1)
 
         self.video_wall = pn.pane.HTML("")
-        # TODO add image output as HTML
         if self.orientation == "vertical":
-            self.whole_output = VBox(
-                [
-                    self.image_output,
-                    top,
-                    self.message_output,
-                    self.choice_buttons,
-                    self.video_wall,
-                ]
-            )
+            # TODO vertical layout
+            pass
         elif self.orientation == "horizontal":
             self.whole_output = pn.Column(
                 top,
                 self.message_output,
-                pn.Row(button_box, self.video_wall),  # TODO gaps somehow!
+                # adding spacer with a width 0 gives a correct gap for some reason
+                pn.Row(button_box, pn.Spacer(width=0), self.video_wall),
             )
 
         self.recluster(None)
@@ -452,7 +403,7 @@ class UI:
     def recluster(self, _):
         nodes_to_cluster = select_nodes_to_cluster(
             self.G,
-            use_watched=bool(self.use_watched_checkbox.v_model),
+            use_watched=self.use_watched,
         )
         self._nodes = nodes_to_cluster
         # clear video_wall to indicate that something is happening
@@ -462,10 +413,8 @@ class UI:
         self.message_output.object = '<div id="header" style="width:800px;"></div>'
 
         tree, img = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
+        # TODO add image output as HTML
 
-        with self.image_output:
-            self.image_output.clear_output()
-            display(Image(value=img.getvalue()))
         video_ids = tree.pre_order()
 
         self.recommender.compute_node_ranks(video_ids)
@@ -484,7 +433,6 @@ class UI:
 
         css_style = """
             <style>
-            body {{margin: 40px;}}
             .wrapper {{
               display: grid;
               grid-template-columns:{};
@@ -515,19 +463,13 @@ class UI:
 
             html += f"""<div style="height: {self.row_height}px;">
                 <a href="{video_url}" target="_blank"><img src="{image_url}" style='width: 100%; object-fit: contain'/></a>
-                <a href="{video_url}" target="_blank" style="text-decoration: none; color:#222222;">{info}<br>{title}</a>
+                <a href="{video_url}" target="_blank" style="text-decoration: none; color:#EEEEEE;">{info}<br>{title}</a>
             </div>"""
         html += "</div>"
         self.video_wall.object = css_style + html
 
     #     def choose_column(self, _widget, _event, _data, i):
     def choose_column(self, _change, i):
-        if time() - self.last_time_something_was_clicked < 0.1:
-            # this call is most probably a ipywidgets_bokeh bug, not a real click
-            return
-        self.last_time_something_was_clicked = time()
-        logging.warning(time())
-
         # make sure that the previous scraping ended
         while self.scraping_thread.is_alive():
             sleep(0.05)
@@ -543,13 +485,8 @@ class UI:
         self.ids_to_show = self.potential_ids_to_show[i]
         self.update_displayed_videos()
 
-    def go_back(self, _widget, _event, _data):
-        if time() - self.last_time_something_was_clicked < 0.1:
-            # this call is most probably a ipywidgets_bokeh bug, not a real click
-            return
-        self.last_time_something_was_clicked = time()
-        logging.warning(time())
-
+    # def go_back(self, _widget, _event, _data):
+    def go_back(self, _event):
         # make sure that the previous scraping ended
         while self.scraping_thread.is_alive():
             sleep(0.05)
@@ -564,9 +501,9 @@ class UI:
         self.ids_to_show = self.previous_ids_to_show.pop()
         self.update_displayed_videos()
 
-    def update_displayed_videos_without_cache(self, _change=None):
+    def update_displayed_videos_without_cache(self, _event=None):
         self.ids_to_show = self.recommender.build_wall(
-            self.tree_climber.grandchildren, bool(self.hide_watched_checkbox.v_model)
+            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
         )
         scrape_from_list(
             self.ids_to_show,
@@ -596,7 +533,7 @@ class UI:
 
             # potential_granchildren has a dimension: (num_of_groups, videos_in_group)
             ids_to_show_in_wall = self.recommender.build_wall(
-                potential_grandchildren, bool(self.hide_watched_checkbox.v_model)
+                potential_grandchildren, self.hide_watched_checkbox.value
             )
             self.potential_ids_to_show.append(ids_to_show_in_wall)
 
@@ -620,35 +557,21 @@ parameters = dict(
     seed=None,
 )
 
-# TODO this part probably has no effect in panel
-# load query parameters
-import os
-from urllib.parse import parse_qs
-
-query_string = os.environ.get("QUERY_STRING", "")
-query_parameters = parse_qs(query_string)
-
-for param_name in parameters.keys():
-    if param_name in query_parameters:
-        # parameters is a dict of lists
-        parameters[param_name] = float(query_parameters[param_name][0])
-
-
 ui = UI(G, **parameters)
-pn.panel(ui.whole_output).servable()
+# pn.panel(ui.whole_output).servable()
 
-########################################################
+# # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
+template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
 
 # dummy_slider = pn.widgets.FloatSlider(name="Phase", start=0, end=np.pi)
-# main = pn.panel(ui.whole_output)
-
-# template = pn.template.FastListTemplate(title='YourTube', theme=pn.template.DarkTheme)
-# # only sane templates are FastListTemplate and VanillaTemplate
 # template.sidebar.append(dummy_slider)
-# template.main.append(main)
-# template.servable()
+
+template.main.append(ui.whole_output)
+template.servable()
 
 
+########################################
+# opening sidebar manually
 # html = pn.pane.HTML("")
 # button_open = pn.widgets.Button(name="openNav")
 # button_close = pn.widgets.Button(name="closeNav")

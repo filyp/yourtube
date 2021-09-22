@@ -1,62 +1,63 @@
-# TODO this can break, as MWC is still in beta, so maybe migrate to MDC:
-# https://github.com/material-components/material-components-web
-
 import panel as pn
 import param
 from panel.reactive import ReactiveHTML
 
-# pn.extension()
-
+# I import both MDC and MWC, because in MWC button height cannot be set
+# and in MDC, I wasn't able to make switches
+# TODO we should migrate to MDC completely or even better, vuetify
 required_modules = pn.pane.HTML(
     """
-    <script type="module" src="https://unpkg.com/@material/mwc-button?module"></script>
-    <script type="module" src="https://unpkg.com/@material/mwc-slider?module"></script>
+    <head>
+        <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+        <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    </head>
+    <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    </head>
+
     <script type="module" src="https://unpkg.com/@material/mwc-switch?module"></script>
 """
 )
 
 
 class MaterialButton(ReactiveHTML):
+    label = param.String("")
+    style = param.String("")
 
-    index = param.Integer(default=0)
-    _template = (
-        '<mwc-button raised label="${index}" id="dummy" onclick="${_img_click}"></mwc-button>'
-    )
+    _template = """
+        <button class="mdc-button mdc-button--raised" onclick="${on_click}" 
+         id="button_id" style="${style}">
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__label">${label}</span>
+        </button>
+        """
 
-    def _img_click(self, event):
-        self.index += 1
+    def on_click(self, event):
+        pass
 
 
-class _MaterialSwitchOff(ReactiveHTML):
+class _MaterialSwitch(ReactiveHTML):
     initial_value = param.Boolean(False)
     value = False
 
-    _template = (
-        '<mwc-switch id="dummy" selected="${initial_value}" onclick="${_switch}"></mwc-switch>'
-    )
+    _template = """
+        <mwc-switch id="switch_id" selected="${initial_value}" onclick="${_switch}"></mwc-switch>
+    """
 
+    # TODO switching this way is dangerous, we should read the switch value directly
     def _switch(self, event):
         # self.event = event
         self.value = not self.value
 
 
-class _MaterialSwitchOn(ReactiveHTML):
-    initial_value = param.Boolean(True)
-    value = True
-
-    _template = (
-        '<mwc-switch id="dummy" selected="${initial_value}" onclick="${_switch}"></mwc-switch>'
-    )
-
-    def _switch(self, event):
-        # self.event = event
-        self.value = not self.value
-
-
-# TODO is there a way to do this cleanly?
+# TODO is there a cleaner way to do this?
 class MaterialSwitch:
     def __new__(self, *args, **kwargs):
+        switch = _MaterialSwitch(*args, **kwargs)
         if kwargs["initial_value"]:
-            return _MaterialSwitchOn(*args, **kwargs)
+            switch.initial_value = True
+            switch.value = True
         else:
-            return _MaterialSwitchOff(*args, **kwargs)
+            switch.initial_value = False
+            switch.value = False
+        return switch
