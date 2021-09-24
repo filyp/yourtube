@@ -50,7 +50,7 @@ You can play with the demo [here](http://yourtube.quest). It's meant only to sho
 
 ```
 pip install yourtube
-mkdir ~/.yourtube
+yourtube-install
 ```
 
 Now export your data from youtube with these steps (sadly this cannot be automated):

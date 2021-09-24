@@ -36,10 +36,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 yourtube = 'yourtube.__init__:run'
+yourtube-install = 'yourtube.__init__:install'
 yourtube-scrape = 'yourtube.scraping:scrape_all_playlists'
 yourtube-scrape-watched = 'yourtube.scraping:scrape_watched'
 yourtube-scrape-transcripts = 'yourtube.scraping:scrape_transcripts_from_watched_videos'
-yourtube-prepare-db = 'yourtube.__init__:prepare_neo4j_database'
 
 [tool.black]
 line-length = 100
