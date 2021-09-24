@@ -6,7 +6,6 @@
 import functools
 import logging
 import random
-import shelve
 from threading import Thread
 from time import sleep, time
 
@@ -37,6 +36,7 @@ from yourtube.material_components import (
 from yourtube.neo4j_queries import (
     get_all_user_relevant_playlist_info,
     get_all_user_relevant_video_info,
+    get_limited_user_relevant_video_info,
 )
 from yourtube.scraping import scrape_from_list
 
@@ -151,9 +151,10 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
 
     convert_leaf_values_to_original_ids(tree, Main)
 
-    # save to cache
-    with shelve.open(cluster_cache_path) as cache:
-        cache[node_hash] = tree, img
+    # TODO rethink how to cache
+    # # save to cache
+    # with shelve.open(cluster_cache_path) as cache:
+    #     cache[node_hash] = tree, img
     return tree, img
 
 
@@ -561,13 +562,59 @@ driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube
 #     G.add_edge(v1, v2)
 start_time = time()
 logging.info("start loading graph...")
+
+# with driver.session() as s:
+#     node_pairs = s.read_transaction(get_all_user_relevant_video_info, "default")
+# G = nx.DiGraph()
+# for v1, v2 in node_pairs:
+#     G.add_node(v1["video_id"], **v1)
+#     G.add_node(v2["video_id"], **v2)
+#     G.add_edge(v1["video_id"], v2["video_id"])
+
+# loading in this awkward way, loads the graph in 7s instead of 25s
+# maybe we could go even lower by not loading all the watched_values
 with driver.session() as s:
-    node_pairs = s.read_transaction(get_all_user_relevant_video_info, "default")
+    info = s.read_transaction(get_limited_user_relevant_video_info, "default")
 G = nx.DiGraph()
-for v1, v2 in node_pairs:
-    G.add_node(v1["video_id"], **v1)
-    G.add_node(v2["video_id"], **v2)
-    G.add_edge(v1["video_id"], v2["video_id"])
+for (
+    v1_video_id,
+    v1_title,
+    v1_view_count,
+    v1_like_count,
+    v1_time_scraped,
+    v1_is_down,
+    v1_watched_times,
+    v2_video_id,
+    v2_title,
+    v2_view_count,
+    v2_like_count,
+    v2_time_scraped,
+    v2_is_down,
+    v2_watched_times,
+) in info:
+    # load the parameters returned by neo4j, and delete None values
+    params_dict_v1 = dict(
+        title=v1_title,
+        view_count=v1_view_count,
+        like_count=v1_like_count,
+        time_scraped=v1_time_scraped,
+        is_down=v1_is_down,
+        watched_times=v1_watched_times,
+    )
+    params_dict_v1 = {k: v for k, v in params_dict_v1.items() if v is not None}
+    params_dict_v2 = dict(
+        title=v2_title,
+        view_count=v2_view_count,
+        like_count=v2_like_count,
+        time_scraped=v2_time_scraped,
+        is_down=v2_is_down,
+        watched_times=v2_watched_times,
+    )
+    params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
+    G.add_node(v1_video_id, **params_dict_v1)
+    G.add_node(v2_video_id, **params_dict_v2)
+    G.add_edge(v1_video_id, v2_video_id)
+
 with driver.session() as s:
     playlist_info = s.read_transaction(get_all_user_relevant_playlist_info, "default")
 for playlist_name, video_id, time_added in playlist_info:
