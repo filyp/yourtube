@@ -4,7 +4,7 @@
 # https://github.com/holoviz/panel/issues/2593
 
 import functools
-import hashlib
+import logging
 import random
 import shelve
 from threading import Thread
@@ -17,8 +17,10 @@ import panel as pn
 from IPython.core.display import HTML, display
 from krakow import krakow
 from krakow.utils import normalized_dasgupta_cost, split_into_n_children
+from neo4j import GraphDatabase
 from scipy.cluster.hierarchy import cut_tree, leaves_list, to_tree
 
+logging.root.setLevel(logging.INFO)
 plt.style.use("dark_background")
 
 pn.extension()
@@ -26,27 +28,22 @@ pn.extension()
 # pn.extension(template='material', theme='dark')
 # pn.extension('ipywidgets')
 
-from yourtube.file_operations import (
-    cluster_cache_path,
-    id_to_url,
-    load_graph,
-    save_graph,
-)
+from yourtube.file_operations import cluster_cache_path, id_to_url
 from yourtube.material_components import (
     MaterialButton,
     MaterialSwitch,
     required_modules,
 )
+from yourtube.neo4j_queries import (
+    get_all_user_relevant_playlist_info,
+    get_all_user_relevant_video_info,
+)
 from yourtube.scraping import scrape_from_list
-
-# logging.basicConfig(level=logging.INFO)
 
 id_to_thumbnail = "https://i.ytimg.com/vi/{}/mqdefault.jpg"
 # id_to_thumbnail = "https://i.ytimg.com/vi/{}/maxresdefault.jpg"
 # hq and sd usually has black stripes
 # mq < hq < sd < maxres
-
-G = load_graph()
 
 # filtering functions
 # note that they are all generators
@@ -118,14 +115,15 @@ def select_nodes_to_cluster(G, use_watched=False):
 
 
 def cluster_subgraph(nodes_to_cluster, G, balance=2):
-    # use cache
-    sorted_nodes = sorted(nodes_to_cluster)
-    unique_node_string = "".join(sorted_nodes)
-    unique_node_string += str(balance)
-    node_hash = hashlib.md5(unique_node_string.encode()).hexdigest()
-    with shelve.open(cluster_cache_path) as cache:
-        if node_hash in cache:
-            return cache[node_hash]
+    # TODO rethink how to cache, for now it must be turned off, to avoid shelve errors
+    # # use cache
+    # sorted_nodes = sorted(nodes_to_cluster)
+    # unique_node_string = "".join(sorted_nodes)
+    # unique_node_string += str(balance)
+    # node_hash = hashlib.md5(unique_node_string.encode()).hexdigest()
+    # with shelve.open(cluster_cache_path) as cache:
+    #     if node_hash in cache:
+    #         return cache[node_hash]
 
     RecentDirected = G.subgraph(nodes_to_cluster)
     Recent = RecentDirected.to_undirected()
@@ -158,8 +156,6 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
         cache[node_hash] = tree, img
     return tree, img
 
-
-# B = load_graph("basia")
 
 # ranking functions
 
@@ -314,6 +310,7 @@ class UI:
     def __init__(
         self,
         G,
+        driver,
         num_of_groups,
         videos_in_group,
         clustering_balance,
@@ -324,6 +321,7 @@ class UI:
     ):
         # TODO orientation is temporarily broken
         self.G = G
+        self.driver = driver
         self.num_of_groups = int(num_of_groups)
         self.videos_in_group = int(videos_in_group)
         # round to have less possible balance values, to better use cache
@@ -423,7 +421,7 @@ class UI:
 
         self.update_displayed_videos_without_cache()
 
-    def display_video_grid(self, ids):
+    def display_video_grid(self, ids, display_text=True):
         if self.orientation == "vertical":
             ids = np.transpose(ids).flatten()
             num_of_columns = self.num_of_groups
@@ -454,16 +452,21 @@ class UI:
 
             video_url = id_to_url.format(id_)
             image_url = id_to_thumbnail.format(id_)
-            title = self.G.nodes[id_]["title"]
 
-            rank = self.recommender.node_ranks.get(id_)
-            likes_to_views = liked_to_views_ratio(self.G, id_)
-            likes_to_views = int(likes_to_views * 1000)
-            info = f"rank: {rank}   l/v: {likes_to_views}"
+            if display_text:
+                title = self.G.nodes[id_]["title"]
+                rank = self.recommender.node_ranks.get(id_)
+                likes_to_views = liked_to_views_ratio(self.G, id_)
+                likes_to_views = int(likes_to_views * 1000)
+                info = f"rank: {rank}   l/v: {likes_to_views}"
+                text = f'<a href="{video_url}" target="_blank" style="text-decoration: none; color:#EEEEEE;">{info}<br>{title}</a>'
+            else:
+                text = ""
 
-            html += f"""<div style="height: {self.row_height}px;">
+            html += f"""
+            <div style="height: {self.row_height}px;">
                 <a href="{video_url}" target="_blank"><img src="{image_url}" style='width: 100%; object-fit: contain'/></a>
-                <a href="{video_url}" target="_blank" style="text-decoration: none; color:#EEEEEE;">{info}<br>{title}</a>
+                {text}
             </div>"""
         html += "</div>"
         self.video_wall.object = css_style + html
@@ -507,11 +510,11 @@ class UI:
         )
         scrape_from_list(
             self.ids_to_show,
-            self.G,
+            self.driver,
             skip_if_fresher_than=float("inf"),
             non_verbose=True,
+            G=self.G,
         )
-        save_graph(self.G)
         self.update_displayed_videos()
 
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
@@ -539,12 +542,42 @@ class UI:
 
         scrape_from_list(
             self.potential_ids_to_show,
-            self.G,
+            self.driver,
             skip_if_fresher_than=float("inf"),
             non_verbose=True,
+            G=self.G,
         )
-        # TODO migrate to neo4
-        # save_graph(self.G)
+
+
+#######################################################################################
+
+driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
+
+# create a networkx graph out of neo4j
+# with driver.session() as s:
+#     edge_pairs = s.read_transaction(get_user_relevant_edges, "default")
+# G = nx.DiGraph()
+# for v1, v2 in edge_pairs:
+#     G.add_edge(v1, v2)
+start_time = time()
+logging.info("start loading graph...")
+with driver.session() as s:
+    node_pairs = s.read_transaction(get_all_user_relevant_video_info, "default")
+G = nx.DiGraph()
+for v1, v2 in node_pairs:
+    G.add_node(v1["video_id"], **v1)
+    G.add_node(v2["video_id"], **v2)
+    G.add_edge(v1["video_id"], v2["video_id"])
+with driver.session() as s:
+    playlist_info = s.read_transaction(get_all_user_relevant_playlist_info, "default")
+for playlist_name, video_id, time_added in playlist_info:
+    if video_id not in G.nodes:
+        # this means the video had no recommended videos, and wasn't matched by the previous step
+        # so it's probably down
+        continue
+    G.nodes[video_id]["from"] = playlist_name
+    G.nodes[video_id]["time_added"] = time_added
+logging.info(f"loading graph took: {int(time() - start_time)} seconds")
 
 
 parameters = dict(
@@ -557,8 +590,7 @@ parameters = dict(
     seed=None,
 )
 
-ui = UI(G, **parameters)
-# pn.panel(ui.whole_output).servable()
+ui = UI(G, driver, **parameters)
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
@@ -568,22 +600,3 @@ template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.Dark
 
 template.main.append(ui.whole_output)
 template.servable()
-
-
-########################################
-# opening sidebar manually
-# html = pn.pane.HTML("")
-# button_open = pn.widgets.Button(name="openNav")
-# button_close = pn.widgets.Button(name="closeNav")
-
-# def open(event):
-#     html.object = f""" <script> openNav(); </script>"""
-# button_open.on_click(open)
-
-# def close(event):
-#     html.object = f""" <script> closeNav(); </script>"""
-# button_close.on_click(close)
-
-# html.servable(area="sidebar")
-# button_open.servable()
-# button_close.servable()

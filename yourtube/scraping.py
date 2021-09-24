@@ -1,9 +1,11 @@
+import logging
 import re
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from time import time
 
 import numpy as np
 import requests
+from neo4j import GraphDatabase
 from tqdm import tqdm
 from youtube_transcript_api import (
     NoTranscriptFound,
@@ -20,6 +22,7 @@ from yourtube.file_operations import (
     load_graph,
     save_graph,
 )
+from yourtube.neo4j_queries import *
 
 seconds_in_day = 60 * 60 * 24
 seconds_in_month = seconds_in_day * 30.4
@@ -140,34 +143,46 @@ def get_keywords(content):
     return keywords
 
 
-def scrape_content(content, id_, G):
+def scrape_content(content, id_, driver, G=None):
+    "if G is not None, in addition to saving in neo4j, also update G"
+
     recs = get_recommended_ids(content, id_)
     if len(recs) <= 1:
         # this video is probably removed from youtube
-        # TODO maybe the node should be removed too
-        G.add_node(id_)
-        G.nodes[id_]["is_down"] = True
+        with driver.session() as s:
+            s.write_transaction(mark_video_as_down, id_)
+        if G is not None:
+            G.add_node(id_)
+            G.nodes[id_]["is_down"] = True
         return
-    for rec in recs:
-        G.add_edge(id_, rec)
 
+    video_info = dict()
+    video_info["video_id"] = id_
     try:
-        G.nodes[id_]["title"] = get_title(content)
-        G.nodes[id_]["view_count"] = get_view_count(content)
-        G.nodes[id_]["like_count"] = get_like_count(content)
-        G.nodes[id_]["channel_id"] = get_channel_id(content)
-        G.nodes[id_]["category"] = get_category(content)
-        G.nodes[id_]["length"] = get_length(content)
-        G.nodes[id_]["keywords"] = get_keywords(content)
-        G.nodes[id_]["time_scraped"] = time()
+        video_info["title"] = get_title(content)
+        video_info["view_count"] = get_view_count(content)
+        video_info["like_count"] = get_like_count(content)
+        video_info["channel_id"] = get_channel_id(content)
+        video_info["category"] = get_category(content)
+        video_info["length"] = get_length(content)
+        video_info["keywords"] = get_keywords(content)
+        video_info["time_scraped"] = time()
     except Exception:
         print("\n\nscraping failed for video: ", id_)
         raise
 
+    with driver.session() as s:
+        s.write_transaction(update_video, recs, **video_info)
+    if G is not None:
+        logging.info(f"adding node : {id_}")
+        G.add_node(id_, **video_info)
+        for rec in recs:
+            G.add_edge(id_, rec)
 
-def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
+
+def scrape_from_list(ids, driver, skip_if_fresher_than=None, non_verbose=False, G=None):
     """
-    Scrapes videos from the ids_to_add list and adds them to graph G
+    Scrapes videos from the ids_to_add list and adds them to neo4j database
 
     ids:
         can be multidimensional, as long as it is convertible to numpy array
@@ -184,18 +199,24 @@ def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
     # decide which videos to skip
     ids_to_scrape = []
     for id_ in ids:
-        if id_ in G.nodes:
-            node = G.nodes[id_]
-            # check if this video is down
-            if "is_down" in node and node["is_down"]:
-                continue
-            # check if this video was already scraped recently
-            if (
-                skip_if_fresher_than is not None
-                and "time_scraped" in node
-                and time() - node["time_scraped"] < skip_if_fresher_than
-            ):
-                continue
+        if G is not None:
+            # if G is given, use it to skip already scraped nodes
+            if id_ in G.nodes:
+                node = G.nodes[id_]
+                # check if this video is down
+                if "is_down" in node and node["is_down"]:
+                    continue
+                # check if this video was already scraped recently
+                if (
+                    skip_if_fresher_than is not None
+                    and "time_scraped" in node
+                    and time() - node["time_scraped"] < skip_if_fresher_than
+                ):
+                    continue
+        else:
+            # TODO if G is not given, neo4j shoudl be used to skip them
+            # find out how to do it efficiently
+            pass
         ids_to_scrape.append(id_)
 
     if not non_verbose:
@@ -216,7 +237,7 @@ def scrape_from_list(ids, G, skip_if_fresher_than=None, non_verbose=False):
             except Exception as ex:
                 print("thread generated an exception: %s" % (ex))
                 continue
-            scrape_content(content, id_, G)
+            scrape_content(content, id_, driver, G)
 
 
 def only_added_in_last_n_years(ids_to_add, times_added, n=5):
@@ -235,58 +256,54 @@ def only_added_in_last_n_years(ids_to_add, times_added, n=5):
     return filtered_ids_to_add, filtered_times_to_add
 
 
-def scrape_playlist(playlist_name, G, years=5, skip_if_fresher_than=seconds_in_month):
+def scrape_playlist(
+    username, playlist_name, driver, years=5, skip_if_fresher_than=seconds_in_month
+):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
     ids_to_add, times_added = only_added_in_last_n_years(ids_to_add, times_added, n=years)
 
-    scrape_from_list(ids_to_add, G, skip_if_fresher_than=skip_if_fresher_than)
+    scrape_from_list(ids_to_add, driver, skip_if_fresher_than=skip_if_fresher_than)
 
-    # add data about the time they were added
-    for id_, time_added in zip(ids_to_add, times_added):
-        if id_ in G:
-            G.nodes[id_]["time_added"] = time_added
-            G.nodes[id_]["from"] = playlist_name
+    with driver.session() as s:
+        # ensure that this playlist exists in database
+        s.write_transaction(ensure_playlist_exists, username, playlist_name)
+        # add data about the time they were added and from which playlist and user
+        for video_id, time_added in zip(ids_to_add, times_added):
+            s.write_transaction(
+                add_info_that_video_is_in_playlist, username, playlist_name, video_id, time_added
+            )
 
 
+#######################################################################################
 # exposed functions:
 
 
-def scrape_all_playlists(years=5):
-    G = load_graph()
+def scrape_all_playlists(username="default", years=5):
+    driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
 
-    try:
-        for playlist_name in get_playlist_names():
-            print()
-            print("scraping: ", playlist_name)
-            scrape_playlist(playlist_name, G, years=years, skip_if_fresher_than=seconds_in_day)
-    except:
-        save_graph(G)
-        print("We crashed. Saving the graph...")
-        raise
-
-    save_graph(G)
+    for playlist_name in get_playlist_names():
+        print()
+        print("scraping: ", playlist_name)
+        scrape_playlist(
+            username, playlist_name, driver, years=years, skip_if_fresher_than=seconds_in_day
+        )
 
 
 def scrape_watched():
-    G = load_graph()
+    driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
 
-    try:
-        id_to_watched_times = get_youtube_watched_ids()
-        # note: it looks that in watched videos, there are only stored watches from the last 5 years
+    id_to_watched_times = get_youtube_watched_ids()
+    # note: it looks that in watched videos, there are only stored watches from the last 5 years
 
-        ids_to_add = list(id_to_watched_times.keys())
-        scrape_from_list(ids_to_add, G, skip_if_fresher_than=seconds_in_month)
+    ids_to_add = list(id_to_watched_times.keys())
+    scrape_from_list(ids_to_add, driver, skip_if_fresher_than=seconds_in_month)
 
-        # add data about the time they were added
-        for id_, watched_times in id_to_watched_times.items():
-            if id_ in G:
-                G.nodes[id_]["watched_times"] = watched_times
-    except:
-        save_graph(G)
-        print("We crashed. Saving the graph...")
-        raise
-
-    save_graph(G)
+    # add data about the time they were added
+    # assumes that the videos already exist in the DB (they were added in the previous step)
+    # todo? this should be mandatory, even if we aren't scraping all the watched
+    with driver.session() as s:
+        for video_id, watched_times in id_to_watched_times.items():
+            s.write_transaction(add_watched_times, video_id, watched_times)
 
 
 def scrape_transcripts_from_watched_videos():
