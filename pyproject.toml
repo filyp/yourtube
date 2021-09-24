@@ -39,6 +39,7 @@ yourtube = 'yourtube.__init__:run'
 yourtube-scrape = 'yourtube.scraping:scrape_all_playlists'
 yourtube-scrape-watched = 'yourtube.scraping:scrape_watched'
 yourtube-scrape-transcripts = 'yourtube.scraping:scrape_transcripts_from_watched_videos'
+yourtube-prepare-db = 'yourtube.__init__:prepare_neo4j_database'
 
 [tool.black]
 line-length = 100

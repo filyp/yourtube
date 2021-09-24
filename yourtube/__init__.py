@@ -4,6 +4,10 @@ import os
 import pathlib
 import subprocess
 
+from neo4j import GraphDatabase
+
+from yourtube.neo4j_queries import create_constraints
+
 dir_ = pathlib.Path(__file__).parent.resolve()
 app_path = os.path.join(dir_, "YourTube.py")
 
@@ -14,3 +18,10 @@ def run():
     # "--autoreload",
     # if this command cannot import yourtube, setting PYTHONPATH is needed
     # https://stackoverflow.com/questions/37275033/running-export-command-with-pythons-subprocess-does-not-work
+
+
+def prepare_neo4j_database():
+    driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
+    # this creates neeeded constraints (which by the way sets up indexes)
+    with driver.session() as s:
+        s.write_transaction(create_constraints)
