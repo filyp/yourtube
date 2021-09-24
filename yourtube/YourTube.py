@@ -70,14 +70,14 @@ def added_in_last_n_years(G, ids, n=5):
 def only_not_watched(G, ids):
     for id_ in ids:
         node = G.nodes[id_]
-        if not node.get("watched_times"):
+        if not node.get("watched"):
             yield id_
 
 
 def only_watched(G, ids):
     for id_ in ids:
         node = G.nodes[id_]
-        if node.get("watched_times"):
+        if node.get("watched"):
             yield id_
 
 
@@ -583,14 +583,14 @@ for (
     v1_like_count,
     v1_time_scraped,
     v1_is_down,
-    v1_watched_times,
+    v1_watched,
     v2_video_id,
     v2_title,
     v2_view_count,
     v2_like_count,
     v2_time_scraped,
     v2_is_down,
-    v2_watched_times,
+    v2_watched,
 ) in info:
     # load the parameters returned by neo4j, and delete None values
     params_dict_v1 = dict(
@@ -599,7 +599,7 @@ for (
         like_count=v1_like_count,
         time_scraped=v1_time_scraped,
         is_down=v1_is_down,
-        watched_times=v1_watched_times,
+        watched=v1_watched,
     )
     params_dict_v1 = {k: v for k, v in params_dict_v1.items() if v is not None}
     params_dict_v2 = dict(
@@ -608,7 +608,7 @@ for (
         like_count=v2_like_count,
         time_scraped=v2_time_scraped,
         is_down=v2_is_down,
-        watched_times=v2_watched_times,
+        watched=v2_watched,
     )
     params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
     G.add_node(v1_video_id, **params_dict_v1)

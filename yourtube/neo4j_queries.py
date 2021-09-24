@@ -129,7 +129,7 @@ def get_all_user_relevant_playlist_info(username):
 def get_limited_user_relevant_video_info(username):
     """
     MATCH (p:playlist {username: $username})-[:HAS]->(v1:video)-[:RECOMMENDS]->(v2:video)
-    RETURN v1.video_id, v1.title, v1.view_count, v1.like_count, v1.time_scraped, v1.is_down, v1.watched_times, v2.video_id, v2.title, v2.view_count, v2.like_count, v2.time_scraped, v2.is_down, v2.watched_times
+    RETURN v1.video_id, v1.title, v1.view_count, v1.like_count, v1.time_scraped, v1.is_down, v1.watched, v2.video_id, v2.title, v2.view_count, v2.like_count, v2.time_scraped, v2.is_down, v2.watched
     """
 
 
@@ -138,4 +138,5 @@ def add_watched_times(video_id, watched_times):
     """
     MATCH (v:video {video_id: $video_id})
     SET v.watched_times = $watched_times
+    SET v.watched = true
     """
