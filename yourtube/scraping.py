@@ -179,7 +179,7 @@ def scrape_content(content, id_, driver=None, G=None):
         with driver.session() as s:
             s.write_transaction(update_video, recs, **video_info)
     if G is not None:
-        logging.info(f"adding node : {id_}")
+        logging.debug(f"adding node : {id_}")
         G.add_node(id_, **video_info)
         for rec in recs:
             G.add_edge(id_, rec)
