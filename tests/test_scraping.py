@@ -22,7 +22,7 @@ def test_version():
 
 
 def test_scraping():
-    scrape_from_list([id_], G, non_verbose=True)
+    scrape_from_list([id_], driver=None, non_verbose=True, G=G)
 
 
 def test_scraping_title():

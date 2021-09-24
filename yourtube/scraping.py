@@ -143,14 +143,18 @@ def get_keywords(content):
     return keywords
 
 
-def scrape_content(content, id_, driver, G=None):
-    "if G is not None, in addition to saving in neo4j, also update G"
+def scrape_content(content, id_, driver=None, G=None):
+    """
+    if driver is not None, save the content into neo4j
+    if G is not None, in addition to saving to neo4j, also update G
+    """
 
     recs = get_recommended_ids(content, id_)
     if len(recs) <= 1:
         # this video is probably removed from youtube
-        with driver.session() as s:
-            s.write_transaction(mark_video_as_down, id_)
+        if driver is not None:
+            with driver.session() as s:
+                s.write_transaction(mark_video_as_down, id_)
         if G is not None:
             G.add_node(id_)
             G.nodes[id_]["is_down"] = True
@@ -171,8 +175,9 @@ def scrape_content(content, id_, driver, G=None):
         print("\n\nscraping failed for video: ", id_)
         raise
 
-    with driver.session() as s:
-        s.write_transaction(update_video, recs, **video_info)
+    if driver is not None:
+        with driver.session() as s:
+            s.write_transaction(update_video, recs, **video_info)
     if G is not None:
         logging.info(f"adding node : {id_}")
         G.add_node(id_, **video_info)
@@ -180,7 +185,7 @@ def scrape_content(content, id_, driver, G=None):
             G.add_edge(id_, rec)
 
 
-def scrape_from_list(ids, driver, skip_if_fresher_than=None, non_verbose=False, G=None):
+def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=False, G=None):
     """
     Scrapes videos from the ids_to_add list and adds them to neo4j database
 
