@@ -234,8 +234,12 @@ def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=Fa
             if is_down:
                 # down videos should be skipped
                 continue
+            if time_scraped is None:
+                # it is present in the database, but wasn't scraped yet
+                ids_to_scrape.append(id_)
+                continue
             if skip_if_fresher_than is None:
-                # don't skip any  scraped videos
+                # don't skip any scraped videos
                 ids_to_scrape.append(id_)
                 continue
             if time() - time_scraped < skip_if_fresher_than:
