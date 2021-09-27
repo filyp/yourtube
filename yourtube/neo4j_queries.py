@@ -140,3 +140,11 @@ def add_watched_times(video_id, watched_times):
     SET v.watched_times = $watched_times
     SET v.watched = true
     """
+
+
+@query
+def check_if_this_video_was_scraped(video_id):
+    """
+    MATCH (v:video {video_id: $video_id})
+    RETURN v.time_scraped, v.is_down
+    """

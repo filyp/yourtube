@@ -187,7 +187,7 @@ def scrape_content(content, id_, driver=None, G=None):
 
 def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=False, G=None):
     """
-    Scrapes videos from the ids_to_add list and adds them to neo4j database
+    Scrapes videos from the ids list and adds them to neo4j database and/or networkx graph
 
     ids:
         can be multidimensional, as long as it is convertible to numpy array
@@ -195,6 +195,8 @@ def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=Fa
     skip_if_fresher_than:
         is in seconds
         if set, videos scraped more recently than this time will be skipped
+
+    Either driver or G (or both) must be given.
     """
     # flatten
     ids = np.array(ids).flatten()
@@ -218,17 +220,38 @@ def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=Fa
                     and time() - node["time_scraped"] < skip_if_fresher_than
                 ):
                     continue
+            # no reason to skip this video
+            ids_to_scrape.append(id_)
         else:
-            # TODO if G is not given, neo4j shoudl be used to skip them
-            # find out how to do it efficiently
-            pass
-        ids_to_scrape.append(id_)
+            # if G is not given, use neo4j to decide what to skip
+            with driver.session() as s:
+                result = s.read_transaction(check_if_this_video_was_scraped, id_)
+            if result == []:
+                # it is not present in the database, so scrape
+                ids_to_scrape.append(id_)
+                continue
+            time_scraped, is_down = result[0]
+            if is_down:
+                # down videos should be skipped
+                continue
+            if skip_if_fresher_than is None:
+                # don't skip any  scraped videos
+                ids_to_scrape.append(id_)
+                continue
+            if time() - time_scraped < skip_if_fresher_than:
+                # this video was already scraped recently, so skip
+                continue
+            else:
+                # it was scraped, but long ago, so scrape it
+                ids_to_scrape.append(id_)
+                continue
 
     if not non_verbose:
         print(f"skipped {len(ids) - len(ids_to_scrape)} videos")
 
     with ProcessPoolExecutor(max_workers=8) as executor:
         future_to_id = {executor.submit(get_content, id_): id_ for id_ in ids_to_scrape}
+
         for future in tqdm(
             as_completed(future_to_id),
             total=len(ids_to_scrape),
@@ -243,6 +266,9 @@ def scrape_from_list(ids, driver=None, skip_if_fresher_than=None, non_verbose=Fa
                 print("thread generated an exception: %s" % (ex))
                 continue
             scrape_content(content, id_, driver, G)
+
+            # delete this dict entry, to prevent this dict from eating all the RAM
+            del future_to_id[future]
 
 
 def only_added_in_last_n_years(ids_to_add, times_added, n=5):
@@ -321,7 +347,7 @@ def scrape_transcripts_from_watched_videos():
 
     transcripts_db = get_transcripts_db()
 
-    with ProcessPoolExecutor(max_workers=5) as executor:
+    with ProcessPoolExecutor(max_workers=8) as executor:
         future_to_id = {executor.submit(get_transript, id_): id_ for id_ in ids}
         for future in tqdm(
             as_completed(future_to_id),
@@ -336,5 +362,8 @@ def scrape_transcripts_from_watched_videos():
                 print("thread generated an exception: %s" % (ex))
                 continue
             transcripts_db[id_] = transcript
+
+            # delete this dict entry, to prevent this dict from eating all the RAM
+            del future_to_id[future]
 
     transcripts_db.dump()
