@@ -25,7 +25,7 @@ def install():
     # TODO once poetry-core 1.1.0 drops, this could be made more elegantly, directly with a bash script
     subprocess.run(["bash", installer_path])
 
-    print("\n\nSet up database")
+    print("\n\nSetting up database...")
     driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
     # this creates neeeded constraints (which by the way sets up indexes)
     with driver.session() as s:
