@@ -9,11 +9,10 @@
 Better youtube recommendations
 
 - [x] More autonomy when choosing what to watch
-- [x] Complxtely private
+- [x] Completely private
 - [x] Very customizable
 - [ ] Less clickbait
 - [ ] Recommendations for two or more people
-- [ ] Freetube integration
 - [ ] Sharing and browsing information bubbles
 
 You can play with the demo [here](http://yourtube.quest). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
