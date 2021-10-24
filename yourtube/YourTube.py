@@ -19,7 +19,9 @@ from krakow.utils import normalized_dasgupta_cost, split_into_n_children
 from neo4j import GraphDatabase
 from scipy.cluster.hierarchy import cut_tree, leaves_list, to_tree
 
-logging.root.setLevel(logging.INFO)
+logger = logging.getLogger("yourtube")
+logger.setLevel(logging.DEBUG)
+
 plt.style.use("dark_background")
 
 pn.extension()
@@ -455,6 +457,7 @@ class UI:
             image_url = id_to_thumbnail.format(id_)
 
             if display_text:
+                logger.debug(id_)
                 title = self.G.nodes[id_]["title"]
                 rank = self.recommender.node_ranks.get(id_)
                 likes_to_views = liked_to_views_ratio(self.G, id_)
@@ -561,7 +564,7 @@ driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube
 # for v1, v2 in edge_pairs:
 #     G.add_edge(v1, v2)
 start_time = time()
-logging.info("start loading graph...")
+logger.info("start loading graph...")
 
 # with driver.session() as s:
 #     node_pairs = s.read_transaction(get_all_user_relevant_video_info, "default")
@@ -624,7 +627,7 @@ for playlist_name, video_id, time_added in playlist_info:
         continue
     G.nodes[video_id]["from"] = playlist_name
     G.nodes[video_id]["time_added"] = time_added
-logging.info(f"loading graph took: {int(time() - start_time)} seconds")
+logger.info(f"loading graph took: {int(time() - start_time)} seconds")
 
 
 parameters = dict(

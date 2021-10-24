@@ -8,3 +8,4 @@ dist
 tests/__pycache__
 commit_message.txt
 .vscode
+*.ipynb
