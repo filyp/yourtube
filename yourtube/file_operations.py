@@ -36,7 +36,7 @@ def load_graph_from_neo4j(driver, user):
     if os.path.isfile(graph_path):
         time_modified = os.path.getmtime(graph_path)
         seconds_in_a_day = 60 * 60 * 24
-        if time() - time_modified < seconds_in_a_day * 7:
+        if time() - time_modified < seconds_in_a_day * 3:
             logger.info("using cached graph")
             with open(graph_path, "rb") as handle:
                 return pickle.load(handle)

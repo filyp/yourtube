@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import panel as pn
+import param
 from IPython.core.display import HTML, display
 from krakow import krakow
 from krakow.utils import split_into_n_children
@@ -136,10 +137,6 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
 
     D = krakow(Main, balance=balance)
     tree = to_tree(D)
-
-    # img = plot_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
-    img = None
-
     # normalized_dasgupta_cost(Main, D)
 
     def convert_leaf_values_to_original_ids(tree, Graph):
@@ -157,7 +154,8 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
     # with shelve.open(cluster_cache_path) as cache:
     #     cache[node_hash] = tree, img
     logger.info(f"clustering took: {time() - start_time:.3f} seconds")
-    return tree, img
+    # D is needed for the visualization
+    return tree, D
 
 
 # ranking functions
@@ -202,11 +200,12 @@ def plot_dendrogram(D, clusters_limit=100, width=10, height=4):
 
 
 class Recommender:
-    def __init__(self, G, cutoff=0.7, seed=None):
+    def __init__(self, G, cutoff, seed):
         self.G = G
         self.cutoff = cutoff
-        self.seed = seed if seed is not None else random.randint(1, 1000000)
+        self.seed = seed
         assert 0 < cutoff < 1
+        assert 1 <= seed <= 1000000
 
     def compute_node_ranks(self, ids):
         """This function must be called on given ids before we can use recommender on those ids."""
@@ -314,30 +313,25 @@ class UI:
         self,
         G,
         driver,
-        num_of_groups,
-        videos_in_group,
-        clustering_balance,
-        recommendation_cutoff,
-        column_width,
-        orientation,
-        seed,
+        parameters,
     ):
         # TODO orientation is temporarily broken
         self.G = G
         self.driver = driver
-        self.num_of_groups = int(num_of_groups)
-        self.videos_in_group = int(videos_in_group)
-        # round to have less possible balance values, to better use cache
-        self.clustering_balance = round(clustering_balance, 1)
-        self.column_width = column_width
-        self.orientation = orientation
-        assert orientation in ["vertical", "horizontal"]
+
+        self.num_of_groups = parameters.num_of_groups
+        self.videos_in_group = parameters.videos_in_group
+        self.clustering_balance = parameters.clustering_balance
+        self.column_width = parameters.column_width
+        self.orientation = parameters.orientation
+        self.show_image = parameters.show_image
+        self.recommender = Recommender(G, parameters.recommendation_cutoff, parameters.seed)
+
         self.grid_gap = 20
-        self.row_height = column_width * 1.1
+        self.row_height = self.column_width * 1.1
         self.scraping_thread = Thread()
 
-        self.recommender = Recommender(G, recommendation_cutoff, seed)
-
+        self.image_output = pn.pane.PNG()
         self.message_output = pn.pane.HTML('<div id="header" style="width:800px;"></div>')
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         # TODO note that vertical is currently broken!
@@ -345,9 +339,10 @@ class UI:
         # define UI controls
         go_back_button = MaterialButton(
             label="Go back",
-            on_click=self.go_back,
             style="width: 110px",
         )
+        go_back_button.on_click = self.go_back
+
         self.hide_watched_checkbox = MaterialSwitch(initial_value=False, width=40)
         self.hide_watched_checkbox.on_event(
             "switch_id", "click", self.update_displayed_videos_without_cache
@@ -393,6 +388,7 @@ class UI:
             pass
         elif self.orientation == "horizontal":
             self.whole_output = pn.Column(
+                self.image_output,
                 top,
                 self.message_output,
                 # adding spacer with a width 0 gives a correct gap for some reason
@@ -413,8 +409,11 @@ class UI:
         # TODO align message output in a better way, maybe with GridSpec
         self.message_output.object = '<div id="header" style="width:800px;"></div>'
 
-        tree, img = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
-        # TODO add image output as HTML
+        tree, D = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
+        if self.show_image:
+            # this is optional, because it takes a few seconds
+            img = plot_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
+            self.image_output.object = img
 
         video_ids = tree.pre_order()
 
@@ -475,7 +474,6 @@ class UI:
         html += "</div>"
         self.video_wall.object = css_style + html
 
-    #     def choose_column(self, _widget, _event, _data, i):
     def choose_column(self, _change, i):
         # make sure that the previous scraping ended
         while self.scraping_thread.is_alive():
@@ -492,7 +490,6 @@ class UI:
         self.ids_to_show = self.potential_ids_to_show[i]
         self.update_displayed_videos()
 
-    # def go_back(self, _widget, _event, _data):
     def go_back(self, _event):
         # make sure that the previous scraping ended
         while self.scraping_thread.is_alive():
@@ -563,23 +560,37 @@ G = load_graph_from_neo4j(driver, user="default")
 logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 
 
-parameters = dict(
-    num_of_groups=3,
-    videos_in_group=5,
-    clustering_balance=1.4,
-    recommendation_cutoff=0.9,
-    column_width=260,
-    orientation="horizontal",
-    seed=None,
-)
+class Parameters(param.Parameterized):
+    clustering_balance = param.Number(1.4, bounds=(1, 2.5), step=0.1)
+    recommendation_cutoff = param.Number(0.9, bounds=(0, 1), step=0.01)
+    num_of_groups = param.Integer(3, bounds=(2, 10), step=1)
+    videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
+    show_image = param.Boolean(True)
+    column_width = param.Integer(260, bounds=(100, 500), step=10)
+    orientation = param.ObjectSelector("horizontal", ["horizontal", "vertical"])
+    seed = param.Integer()
 
-ui = UI(G, driver, **parameters)
+
+parameters = Parameters(seed=random.randint(1, 1000000))
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
 
-# dummy_slider = pn.widgets.FloatSlider(name="Phase", start=0, end=np.pi)
-# template.sidebar.append(dummy_slider)
+ui = UI(G, driver, parameters)
+ui_wrapper = pn.Row(ui.whole_output)
+template.main.append(ui_wrapper)
 
-template.main.append(ui.whole_output)
+
+def refresh(_event):
+    logger.info("refreshed")
+    template.main[0][0] = pn.Spacer()
+    new_ui = UI(G, driver, parameters)
+    template.main[0][0] = new_ui.whole_output
+
+
+refresh_button = pn.widgets.Button(name="Refresh")
+refresh_button.on_click(refresh)
+
+template.sidebar.append(parameters)
+template.sidebar.append(refresh_button)
 template.servable()
