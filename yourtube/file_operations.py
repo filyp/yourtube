@@ -1,13 +1,22 @@
 import csv
 import json
+import logging
 import os
 import pickle
 import re
-from time import mktime
+from time import mktime, time
 
 import networkx as nx
 import pickledb
 from dateutil import parser
+
+from yourtube.neo4j_queries import (
+    get_all_user_relevant_playlist_info,
+    get_limited_user_relevant_video_info,
+)
+
+logger = logging.getLogger("yourtube")
+logger.setLevel(logging.DEBUG)
 
 id_to_url = "https://www.youtube.com/watch?v={}"
 
@@ -21,77 +30,75 @@ history_path = os.path.join(
 )
 
 
-"""
-graph format:
-    id:
-        node identifier
-        11 characters that identify video on youtube (can be found in URL)
-        all the other fields can be absent if the video hasn't been scraped yet
-    title:
-        video title
-    time_scraped:
-        time when the video has been scraped
-        in unix time
-    time_added:
-        time when the video has been added to a playlist
-        in unix time
-        "Watched videos" isn't treated as a playlist
-        "Liked videos" is
-    from:
-        playlist name that the video is from
-    watched_times:
-        list of times when the video has been watched, in unix time
-        it is absent if the video hasn't been watched
-    view_count:
-        number of views on youtube
-        can be None if the video is premium (so the views are ambiguous)
-    like_count:
-        number of likes on youtube
-        can be None if likes are disabled
-    channel_id:
-        id of the channel of this video
-        can be None if the video is unavailable
-    category:
-        category of the video
-    length:
-        video length in seconds
-        can be None if the video is premium (so the views are ambiguous)
-    keywords:
-        keywords of the video as a list of strings
-        can be an empty list if there are no keywords
-    is_down:
-        True if the video is unavailable
-        can be absent if the video is up or hasn't been scraped
+def load_graph_from_neo4j(driver, user):
+    # see if it's cached
+    graph_path = graph_path_template.format(user)
+    if os.path.isfile(graph_path):
+        time_modified = os.path.getmtime(graph_path)
+        seconds_in_a_day = 60 * 60 * 24
+        if time() - time_modified < seconds_in_a_day * 7:
+            logger.info("using cached graph")
+            with open(graph_path, "rb") as handle:
+                return pickle.load(handle)
 
+    # loading in this awkward way, loads the graph in 2s instead of 25s
+    with driver.session() as s:
+        info = s.read_transaction(get_limited_user_relevant_video_info, user)
+    G = nx.DiGraph()
+    for (
+        v1_video_id,
+        v1_title,
+        v1_view_count,
+        v1_like_count,
+        v1_time_scraped,
+        v1_is_down,
+        v1_watched,
+        v2_video_id,
+        v2_title,
+        v2_view_count,
+        v2_like_count,
+        v2_time_scraped,
+        v2_is_down,
+        v2_watched,
+    ) in info:
+        # load the parameters returned by neo4j, and delete None values
+        params_dict_v1 = dict(
+            title=v1_title,
+            view_count=v1_view_count,
+            like_count=v1_like_count,
+            time_scraped=v1_time_scraped,
+            is_down=v1_is_down,
+            watched=v1_watched,
+        )
+        params_dict_v1 = {k: v for k, v in params_dict_v1.items() if v is not None}
+        params_dict_v2 = dict(
+            title=v2_title,
+            view_count=v2_view_count,
+            like_count=v2_like_count,
+            time_scraped=v2_time_scraped,
+            is_down=v2_is_down,
+            watched=v2_watched,
+        )
+        params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
+        G.add_node(v1_video_id, **params_dict_v1)
+        G.add_node(v2_video_id, **params_dict_v2)
+        G.add_edge(v1_video_id, v2_video_id)
 
-    clusters:
-        ...
+    with driver.session() as s:
+        playlist_info = s.read_transaction(get_all_user_relevant_playlist_info, user)
+    for playlist_name, video_id, time_added in playlist_info:
+        if video_id not in G.nodes:
+            # this means the video had no recommended videos, and wasn't matched by the previous step
+            # so it's probably down
+            continue
+        G.nodes[video_id]["from"] = playlist_name
+        G.nodes[video_id]["time_added"] = time_added
 
-    TODO: handle situations where video is in multiple playlists?
-"""
-
-
-def save_graph(G, graph_name="graph"):
-    graph_path = graph_path_template.format(graph_name)
-    assert 0 == len(list(nx.selfloop_edges(G)))
-    # selfloop edges shouldn't happen
-    # G.remove_edges_from(nx.selfloop_edges(G))
-
+    # cache graph
     with open(graph_path, "wb") as handle:
         pickle.dump(G, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    # print("graph saved")
 
-
-def load_graph(graph_name="graph"):
-    graph_path = graph_path_template.format(graph_name)
-    # load or create a Graph
-    if os.path.isfile(graph_path):
-        # print("graph loaded")
-        with open(graph_path, "rb") as handle:
-            return pickle.load(handle)
-    else:
-        print("graph created")
-        return nx.DiGraph()
+    return G
 
 
 def get_transcripts_db():

@@ -19,6 +19,52 @@ def query(func):
     return inner
 
 
+"""
+graph format:
+    id:
+        node identifier
+        11 characters that identify video on youtube (can be found in URL)
+        all the other fields can be absent if the video hasn't been scraped yet
+    title:
+        video title
+    time_scraped:
+        time when the video has been scraped
+        in unix time
+    time_added:
+        time when the video has been added to a playlist
+        in unix time
+        "Watched videos" isn't treated as a playlist
+        "Liked videos" is
+    watched_times:
+        list of times when the video has been watched, in unix time
+        it is absent if the video hasn't been watched
+    view_count:
+        number of views on youtube
+        can be None if the video is premium (so the views are ambiguous)
+    like_count:
+        number of likes on youtube
+        can be None if likes are disabled
+    channel_id:
+        id of the channel of this video
+        can be None if the video is unavailable
+    category:
+        category of the video
+    length:
+        video length in seconds
+        can be None if the video is premium (so the views are ambiguous)
+    keywords:
+        keywords of the video as a list of strings
+        can be an empty list if there are no keywords
+    is_down:
+        True if the video is unavailable
+        can be absent if the video is up or hasn't been scraped
+
+
+    clusters:
+        ...
+"""
+
+
 # create a uniqueness constraint on video_id
 @query
 def create_constraints(tx):
@@ -124,7 +170,6 @@ def get_all_user_relevant_playlist_info(username):
     """
 
 
-# experimental
 @query
 def get_limited_user_relevant_video_info(username):
     """

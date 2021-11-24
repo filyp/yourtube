@@ -19,8 +19,6 @@ from yourtube.file_operations import (
     get_youtube_playlist_ids,
     get_youtube_watched_ids,
     id_to_url,
-    load_graph,
-    save_graph,
 )
 from yourtube.neo4j_queries import *
 
