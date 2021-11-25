@@ -1,5 +1,8 @@
 import functools
+import hashlib
 import logging
+import os
+import pickle
 import random
 from threading import Thread
 from time import sleep, time
@@ -9,11 +12,10 @@ import networkx as nx
 import numpy as np
 import panel as pn
 import param
-from IPython.core.display import HTML, display
 from krakow import krakow
-from krakow.utils import split_into_n_children
+from krakow.utils import create_dendrogram, split_into_n_children
 from neo4j import GraphDatabase
-from scipy.cluster.hierarchy import cut_tree, leaves_list, to_tree
+from scipy.cluster.hierarchy import leaves_list, to_tree
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -26,10 +28,11 @@ pn.extension()
 # pn.extension('ipywidgets')
 
 from yourtube.file_operations import (
-    cluster_cache_path,
+    clustering_cache_template,
     id_to_url,
     load_graph_from_neo4j,
 )
+from yourtube.filtering_functions import *
 from yourtube.material_components import (
     MaterialButton,
     MaterialSwitch,
@@ -42,88 +45,25 @@ id_to_thumbnail = "https://i.ytimg.com/vi/{}/mqdefault.jpg"
 # hq and sd usually has black stripes
 # mq < hq < sd < maxres
 
-# filtering functions
-# note that they are all generators
-
-from itertools import chain
-
-
-def added_in_last_n_years(G, ids, n=5):
-    seconds_in_month = 60 * 60 * 24 * 30.4
-    seconds_in_year = seconds_in_month * 12
-    start_time = time() - seconds_in_year * n
-    # round start_time to months, to prevent clustering being recalculated too frequently
-    # returned ids will change only each month, so the cached value will be used
-    start_time = start_time // seconds_in_month * seconds_in_month
-
-    for id_ in ids:
-        node = G.nodes[id_]
-        if "time_added" not in node:
-            continue
-        if start_time < node["time_added"]:
-            yield id_
-
-
-def only_not_watched(G, ids):
-    for id_ in ids:
-        node = G.nodes[id_]
-        if not node.get("watched"):
-            yield id_
-
-
-def only_watched(G, ids):
-    for id_ in ids:
-        node = G.nodes[id_]
-        if node.get("watched"):
-            yield id_
-
-
-def from_category(G, ids, categories):
-    # note: if some of the ids hasn't beed scraped, they will be filtered out
-    # regardless of their category (because it isn't known)
-    for id_ in ids:
-        node = G.nodes[id_]
-        if node.get("category") in categories:
-            yield id_
-
-
-def not_down(G, ids):
-    for id_ in ids:
-        node = G.nodes[id_]
-        if not node.get("is_down"):
-            yield id_
-
-
-def get_neighborhood(G, ids):
-    out_edges = G.out_edges(ids)
-    return G.edge_subgraph(out_edges).nodes
-
-
-def select_nodes_to_cluster(G, use_watched=False):
-    sources = added_in_last_n_years(G, G.nodes, n=5)
-    if use_watched:
-        watched = only_watched(G, G.nodes)
-        # note that some videos will be duplicated because of this chain
-        # but it's more efficient this way
-        sources = chain(sources, watched)
-
-    sources = not_down(G, sources)
-    return list(get_neighborhood(G, sources))
-
 
 def cluster_subgraph(nodes_to_cluster, G, balance=2):
-    # TODO rethink how to cache, for now it must be turned off, to avoid shelve errors
-    # # use cache
-    # sorted_nodes = sorted(nodes_to_cluster)
-    # unique_node_string = "".join(sorted_nodes)
-    # unique_node_string += str(balance)
-    # node_hash = hashlib.md5(unique_node_string.encode()).hexdigest()
-    # with shelve.open(cluster_cache_path) as cache:
-    #     if node_hash in cache:
-    #         return cache[node_hash]
+    # use cache
+    # here we assume that the same set of nodes will have the same graph structure
+    # this is not true, but collisions are very rare and not destructive
+    sorted_nodes = sorted(nodes_to_cluster)
+    unique_string = "".join(sorted_nodes)
+    node_hash = hashlib.md5(unique_string.encode()).hexdigest()
+    unique_string = f"{balance:.1f}_{node_hash}"
+    cache_file = clustering_cache_template.format(unique_string)
+    if os.path.isfile(cache_file):
+        logger.info(f"using cached clustering: {cache_file}")
+        start_time = time()
+        with open(cache_file, "rb") as handle:
+            res = pickle.load(handle)
+            logger.info(f"loaded clustering in {time() - start_time:.3f} seconds")
+            return res
 
     start_time = time()
-    logger.info("start clustering...")
 
     RecentDirected = G.subgraph(nodes_to_cluster)
     Recent = RecentDirected.to_undirected()
@@ -135,27 +75,27 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
     main_component = components[0]
     Main = Recent.subgraph(main_component)
 
-    D = krakow(Main, balance=balance)
+    D = krakow(Main, alpha=balance, beta=balance)
     tree = to_tree(D)
     # normalized_dasgupta_cost(Main, D)
 
-    def convert_leaf_values_to_original_ids(tree, Graph):
-        main_ids_list = np.array(Graph.nodes)
+    # convert leaf values to original ids
+    main_ids_list = np.array(Main.nodes)
 
-        def substitute_video_id(leaf):
-            leaf.id = main_ids_list[leaf.id]
+    def substitute_video_id(leaf):
+        leaf.id = main_ids_list[leaf.id]
 
-        tree.pre_order(substitute_video_id)
+    tree.pre_order(substitute_video_id)
 
-    convert_leaf_values_to_original_ids(tree, Main)
-
-    # TODO rethink how to cache
-    # # save to cache
-    # with shelve.open(cluster_cache_path) as cache:
-    #     cache[node_hash] = tree, img
     logger.info(f"clustering took: {time() - start_time:.3f} seconds")
-    # D is needed for the visualization
-    return tree, D
+
+    # create image
+    img = create_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
+
+    # save to cache
+    with open(cache_file, "wb") as handle:
+        pickle.dump((tree, img), handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return tree, img
 
 
 # ranking functions
@@ -167,36 +107,6 @@ def liked_to_views_ratio(G, id_):
         return node["like_count"] / node["view_count"]
     except (KeyError, TypeError, ZeroDivisionError):
         return -1
-
-
-# TODO move this to krakow
-import io
-
-from scipy.cluster.hierarchy import dendrogram
-
-
-def plot_dendrogram(D, clusters_limit=100, width=10, height=4):
-    # a hack to disable plotting, only return the image
-    was_interactive = plt.isinteractive()
-    plt.ioff()
-
-    _ = plt.figure(figsize=(width, height))
-    # display logarithm of cluster distances
-    Dlog = D.copy()
-    Dlog[:, 2] = np.log(Dlog[:, 2])
-    # cut off the bottom part of the plot as it's not informative
-    Dlog[:, 2][:-clusters_limit] *= 0
-    Dlog[-clusters_limit:, 2] = Dlog[-clusters_limit:, 2] - Dlog[-clusters_limit, 2]
-
-    dendrogram(Dlog, leaf_rotation=90.0, truncate_mode="lastp", p=clusters_limit)
-    plt.axis("off")
-    img = io.BytesIO()
-    plt.savefig(img, bbox_inches="tight")
-
-    # revert to the previous plt state
-    if was_interactive:
-        plt.ion()
-    return img
 
 
 class Recommender:
@@ -409,10 +319,8 @@ class UI:
         # TODO align message output in a better way, maybe with GridSpec
         self.message_output.object = '<div id="header" style="width:800px;"></div>'
 
-        tree, D = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
+        tree, img = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
         if self.show_image:
-            # this is optional, because it takes a few seconds
-            img = plot_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
             self.image_output.object = img
 
         video_ids = tree.pre_order()
@@ -555,7 +463,6 @@ class UI:
 driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
 
 start_time = time()
-logger.info("start loading graph...")
 G = load_graph_from_neo4j(driver, user="default")
 logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 

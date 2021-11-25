@@ -21,12 +21,14 @@ logger.setLevel(logging.DEBUG)
 id_to_url = "https://www.youtube.com/watch?v={}"
 
 home = os.path.expanduser("~")
-graph_path_template = os.path.join(home, ".yourtube", "{}.pickle")
-cluster_cache_path = os.path.join(home, ".yourtube", "cluster_cache.db")
+graph_path_template = os.path.join(home, ".yourtube", "graph_cache", "{}.pickle")
+clustering_cache_template = os.path.join(home, ".yourtube", "clustering_cache", "{}.pickle")
 transcripts_path = os.path.join(home, ".yourtube", "transcripts.json")
-playlists_path = os.path.join(home, ".yourtube/Takeout/YouTube and YouTube Music/playlists")
+playlists_path = os.path.join(
+    home, ".yourtube", "Takeout", "YouTube and YouTube Music", "playlists"
+)
 history_path = os.path.join(
-    home, ".yourtube/Takeout/YouTube and YouTube Music/history/watch-history.html"
+    home, ".yourtube", "Takeout", "YouTube and YouTube Music", "history", "watch-history.html"
 )
 
 
