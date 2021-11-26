@@ -2,6 +2,13 @@ import panel as pn
 import param
 from panel.reactive import ReactiveHTML
 
+from yourtube.file_operations import id_to_url
+
+id_to_thumbnail = "https://i.ytimg.com/vi/{}/mqdefault.jpg"
+# id_to_thumbnail = "https://i.ytimg.com/vi/{}/maxresdefault.jpg"
+# hq and sd usually has black stripes
+# mq < hq < sd < maxres
+
 # I import both MDC and MWC, because in MWC button height cannot be set
 # and in MDC, I wasn't able to make switches
 # TODO we should migrate to MDC completely or even better, vuetify
@@ -61,3 +68,45 @@ class MaterialSwitch:
             switch.initial_value = False
             switch.value = False
         return switch
+
+
+class VideoGrid(ReactiveHTML):
+    ids = param.List(item_type=str)
+    texts = param.List(item_type=str)
+    _dummy = param.Boolean(False)
+
+    def update(self):
+        # this is needed because just updating the lists, doesn't update the grid
+        self._dummy = not self._dummy
+
+    def __init__(self, n, num_of_columns, column_width, row_height, grid_gap):
+        super().__init__()
+
+        css_style = """
+            <style>
+            .wrapper {{
+              display: grid;
+              grid-template-columns:{};
+              grid-gap: {}px;
+            }}
+            </style>
+        """.format(
+            f"{column_width}px " * num_of_columns,
+            grid_gap,
+        )
+
+        html = '<div class="wrapper">'
+        for i in range(n):
+            id_handle = "${ids[" + str(i) + "]}"
+            text_handle = "${texts[" + str(i) + "]}"
+            video_url = id_to_url.format(id_handle)
+            image_url = id_to_thumbnail.format(id_handle)
+
+            html += f"""
+            <div style="height: {row_height}px;">
+                <a href="{video_url}" target="_blank"><img src="{image_url}" style='width: 100%; object-fit: contain'/></a>
+                <a href="{video_url}" target="_blank" style="text-decoration: none; color:#EEEEEE;">{text_handle}</a>
+            </div>"""
+        html += "</div>"
+
+        self._template = css_style + html + "${_dummy}"

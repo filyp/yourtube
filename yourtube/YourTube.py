@@ -33,17 +33,13 @@ from yourtube.file_operations import (
     load_graph_from_neo4j,
 )
 from yourtube.filtering_functions import *
-from yourtube.material_components import (
+from yourtube.html_components import (
     MaterialButton,
     MaterialSwitch,
+    VideoGrid,
     required_modules,
 )
 from yourtube.scraping import scrape_from_list
-
-id_to_thumbnail = "https://i.ytimg.com/vi/{}/mqdefault.jpg"
-# id_to_thumbnail = "https://i.ytimg.com/vi/{}/maxresdefault.jpg"
-# hq and sd usually has black stripes
-# mq < hq < sd < maxres
 
 
 def cluster_subgraph(nodes_to_cluster, G, balance=2):
@@ -75,7 +71,7 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
     main_component = components[0]
     Main = Recent.subgraph(main_component)
 
-    D = krakow(Main, alpha=balance, beta=balance)
+    D = krakow(Main, alpha=balance, beta=1)
     tree = to_tree(D)
     # normalized_dasgupta_cost(Main, D)
 
@@ -292,7 +288,18 @@ class UI:
         # pop the last spacer
         button_box.pop(-1)
 
-        self.video_wall = pn.pane.HTML("")
+        if self.orientation == "vertical":
+            num_of_columns = self.num_of_groups
+        elif self.orientation == "horizontal":
+            num_of_columns = self.videos_in_group
+        self.video_wall = VideoGrid(
+            self.num_of_groups * self.videos_in_group,
+            num_of_columns,
+            self.column_width,
+            self.row_height,
+            self.grid_gap,
+        )
+
         if self.orientation == "vertical":
             # TODO vertical layout
             pass
@@ -313,8 +320,9 @@ class UI:
             use_watched=self.use_watched,
         )
         self._nodes = nodes_to_cluster
-        # clear video_wall to indicate that something is happening
-        self.video_wall.object = ""
+        # TODO # clear video_wall to indicate that something is happening
+        # self.video_wall.object = ""
+
         # self.message_output.object = ""
         # TODO align message output in a better way, maybe with GridSpec
         self.message_output.object = '<div id="header" style="width:800px;"></div>'
@@ -334,53 +342,34 @@ class UI:
     def display_video_grid(self, ids, display_text=True):
         if self.orientation == "vertical":
             ids = np.transpose(ids).flatten()
-            num_of_columns = self.num_of_groups
         elif self.orientation == "horizontal":
             ids = np.array(ids).flatten()
-            num_of_columns = self.videos_in_group
 
-        css_style = """
-            <style>
-            .wrapper {{
-              display: grid;
-              grid-template-columns:{};
-              grid-gap: {}px;
-            }}
-            </style>
-        """.format(
-            f"{self.column_width}px " * num_of_columns,
-            self.grid_gap,
-        )
-        html = '<div class="wrapper">'
-        for id_ in ids:
+        texts = []
+        for i, id_ in enumerate(ids):
             if id_ == "" or G.nodes[id_].get("is_down"):
                 # it's "" if its cluster turned out empty after filtering
                 # it can also be down
-                # show an empty slot
-                html += f'<div style="height: {self.row_height}px;"></div>'
+                ids[i] = "RqJVa0fl01w"  # confused Travolta
+                texts.append("-")
                 continue
-
-            video_url = id_to_url.format(id_)
-            image_url = id_to_thumbnail.format(id_)
-
             if display_text:
                 # logger.debug(id_)
                 title = self.G.nodes[id_]["title"]
-                rank = self.recommender.node_ranks.get(id_)
-                likes_to_views = liked_to_views_ratio(self.G, id_)
-                likes_to_views = int(likes_to_views * 1000)
-                info = f"rank: {rank}   l/v: {likes_to_views}"
-                text = f'<a href="{video_url}" target="_blank" style="text-decoration: none; color:#EEEEEE;">{info}<br>{title}</a>'
+                # TODO refine and show video info
+                # rank = self.recommender.node_ranks.get(id_)
+                # likes_to_views = liked_to_views_ratio(self.G, id_)
+                # likes_to_views = int(likes_to_views * 1000)
+                # info = f"rank: {rank}   l/v: {likes_to_views}"
+                # text = f"{info}<br>{title}"
+                text = title
             else:
                 text = ""
+            texts.append(text)
 
-            html += f"""
-            <div style="height: {self.row_height}px;">
-                <a href="{video_url}" target="_blank"><img src="{image_url}" style='width: 100%; object-fit: contain'/></a>
-                {text}
-            </div>"""
-        html += "</div>"
-        self.video_wall.object = css_style + html
+        self.video_wall.ids = list(ids)
+        self.video_wall.texts = texts
+        self.video_wall.update()
 
     def choose_column(self, _change, i):
         # make sure that the previous scraping ended
