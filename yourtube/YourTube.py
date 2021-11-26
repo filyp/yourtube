@@ -5,7 +5,7 @@ import os
 import pickle
 import random
 from threading import Thread
-from time import sleep, time
+from time import time
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -339,7 +339,7 @@ class UI:
 
         self.update_displayed_videos_without_cache()
 
-    def display_video_grid(self, ids, display_text=True):
+    def display_video_grid(self, ids):
         if self.orientation == "vertical":
             ids = np.transpose(ids).flatten()
         elif self.orientation == "horizontal":
@@ -353,18 +353,18 @@ class UI:
                 ids[i] = "RqJVa0fl01w"  # confused Travolta
                 texts.append("-")
                 continue
-            if display_text:
-                # logger.debug(id_)
+            # logger.debug(id_)
+            if "title" in self.G.nodes[id_]:
                 title = self.G.nodes[id_]["title"]
-                # TODO refine and show video info
-                # rank = self.recommender.node_ranks.get(id_)
-                # likes_to_views = liked_to_views_ratio(self.G, id_)
-                # likes_to_views = int(likes_to_views * 1000)
-                # info = f"rank: {rank}   l/v: {likes_to_views}"
-                # text = f"{info}<br>{title}"
-                text = title
             else:
-                text = ""
+                title = "..."
+            # TODO refine and show video info
+            # rank = self.recommender.node_ranks.get(id_)
+            # likes_to_views = liked_to_views_ratio(self.G, id_)
+            # likes_to_views = int(likes_to_views * 1000)
+            # info = f"rank: {rank}   l/v: {likes_to_views}"
+            # text = f"{info}<br>{title}"
+            text = title
             texts.append(text)
 
         self.video_wall.ids = list(ids)
@@ -372,10 +372,6 @@ class UI:
         self.video_wall.update()
 
     def choose_column(self, _change, i):
-        # make sure that the previous scraping ended
-        while self.scraping_thread.is_alive():
-            sleep(0.05)
-
         self.message_output.object = ""
 
         exit_code = self.tree_climber.choose_column(i)
@@ -388,10 +384,6 @@ class UI:
         self.update_displayed_videos()
 
     def go_back(self, _event):
-        # make sure that the previous scraping ended
-        while self.scraping_thread.is_alive():
-            sleep(0.05)
-
         self.message_output.object = ""
 
         exit_code = self.tree_climber.go_back()
