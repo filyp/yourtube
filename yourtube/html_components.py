@@ -43,6 +43,18 @@ class MaterialButton(ReactiveHTML):
         pass
 
 
+# class MaterialButton(ReactiveHTML):
+#     label = param.String("")
+#     style = param.String("")
+
+#     _template = """
+#         <v-btn>eeee</v-btn>
+#         """
+
+#     def on_click(self, event):
+#         pass
+
+
 class _MaterialSwitch(ReactiveHTML):
     initial_value = param.Boolean(False)
     value = False
@@ -50,6 +62,27 @@ class _MaterialSwitch(ReactiveHTML):
     _template = """
         <mwc-switch id="switch_id" selected="${initial_value}" onclick="${_switch}"></mwc-switch>
     """
+    # _template = """
+    #     <button id="switch_id" class="mdc-switch mdc-switch--unselected" type="button" role="switch" aria-checked="false" onclick="${_switch}>
+    #         <div class="mdc-switch__track"></div>
+    #         <div class="mdc-switch__handle-track">
+    #             <div class="mdc-switch__handle">
+    #             <div class="mdc-switch__shadow">
+    #                 <div class="mdc-elevation-overlay"></div>
+    #             </div>
+    #             <div class="mdc-switch__ripple"></div>
+    #             <div class="mdc-switch__icons">
+    #                 <svg class="mdc-switch__icon mdc-switch__icon--on" viewBox="0 0 24 24">
+    #                 <path d="M19.69,5.23L8.96,15.96l-4.23-4.23L2.96,13.5l6,6L21.46,7L19.69,5.23z" />
+    #                 </svg>
+    #                 <svg class="mdc-switch__icon mdc-switch__icon--off" viewBox="0 0 24 24">
+    #                 <path d="M20 13H4v-2h16v2z" />
+    #                 </svg>
+    #             </div>
+    #             </div>
+    #         </div>
+    #     </button>
+    # """
 
     # TODO switching this way is dangerous, we should read the switch value directly
     def _switch(self, event):
@@ -68,6 +101,61 @@ class MaterialSwitch:
             switch.initial_value = False
             switch.value = False
         return switch
+
+
+class MaterialTextField(ReactiveHTML):
+    # source: https://panel.holoviz.org/gallery/components/MaterialUI.html
+
+    value = param.String(default="")
+
+    _template = """
+    <label id="text-field" class="mdc-text-field mdc-text-field--filled">
+      <span class="mdc-text-field__ripple"></span>
+      <span class="mdc-floating-label">Label</span>
+      <input id="text-input" type="text" class="mdc-text-field__input" aria-labelledby="my-label" value="${value}"></input>
+      <span class="mdc-line-ripple"></span>
+    </label>
+    """
+
+    _dom_events = {"text-input": ["change"]}
+
+    _scripts = {"render": "mdc.textField.MDCTextField.attachTo(text_field);"}
+
+
+class MaterialSlider(ReactiveHTML):
+    # source: https://panel.holoviz.org/gallery/components/MaterialUI.html
+
+    end = param.Number(default=100)
+
+    start = param.Number(default=0)
+
+    value = param.Number(default=50)
+
+    _template = """
+    <div id="mdc-slider" class="mdc-slider" style="width: ${model.width}px">
+      <input id="slider-input" class="mdc-slider__input" min="${start}" max="${end}" value="${value}">
+      </input>
+      <div class="mdc-slider__track">
+        <div class="mdc-slider__track--inactive"></div>
+        <div class="mdc-slider__track--active">
+          <div class="mdc-slider__track--active_fill"></div>
+        </div>
+      </div>
+      <div class="mdc-slider__thumb">
+        <div class="mdc-slider__thumb-knob"></div>
+      </div>
+    </div>
+    """
+
+    _scripts = {
+        "render": """
+            slider_input.setAttribute('value', data.value)
+        """,
+        # state.slider = mdc.slider.MDCSlider.attachTo(mdc_slider)
+        "value": """
+            state.slider.setValue(data.value)
+        """,
+    }
 
 
 class VideoGrid(ReactiveHTML):

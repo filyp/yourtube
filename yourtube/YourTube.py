@@ -22,7 +22,21 @@ logger.setLevel(logging.DEBUG)
 
 plt.style.use("dark_background")
 
-pn.extension()
+# pn.extension doesn't support loading
+pn.extension(
+    # js_files={
+    #     'mdc': 'https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js',
+    #     "vue": "https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js",
+    #     "vuetify": "https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js",
+    # },
+    # css_files=[
+    #     'https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css',
+    #     "https://fonts.googleapis.com/icon?family=Material+Icons",
+    #     "https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css",
+    #     "https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css",
+    #     "https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900",
+    # ],
+)
 # pn.extension(template='vanilla')
 # pn.extension(template='material', theme='dark')
 # pn.extension('ipywidgets')
@@ -35,7 +49,9 @@ from yourtube.file_operations import (
 from yourtube.filtering_functions import *
 from yourtube.html_components import (
     MaterialButton,
+    MaterialSlider,
     MaterialSwitch,
+    MaterialTextField,
     VideoGrid,
     required_modules,
 )
@@ -178,6 +194,7 @@ class TreeClimber:
     def reset(self, tree):
         self.tree = tree
         self.path = []
+        self.branch_id = ""
         self.children, self.grandchildren = self.new_offspring(self.tree)
 
     def choose_column(self, i):
@@ -191,6 +208,7 @@ class TreeClimber:
             return -1
 
         self.path.append(self.tree)
+        self.branch_id += str(i + 1)
         self.tree = new_tree
         self.children = new_children
         self.grandchildren = new_grandchildren
@@ -203,6 +221,7 @@ class TreeClimber:
         if self.path == []:
             return -1
         self.tree = self.path.pop()
+        self.branch_id = self.branch_id[:-1]
         self.children, self.grandchildren = self.new_offspring(self.tree)
         return 0
 
@@ -215,6 +234,8 @@ class TreeClimber:
 
 
 class UI:
+    info_template = '<div id="message_output" style="width:400px;">{}</div>'
+
     def __init__(
         self,
         G,
@@ -231,16 +252,20 @@ class UI:
         self.column_width = parameters.column_width
         self.orientation = parameters.orientation
         self.show_image = parameters.show_image
-        self.recommender = Recommender(G, parameters.recommendation_cutoff, parameters.seed)
 
         self.grid_gap = 20
-        self.row_height = self.column_width * 1.1
+        self.row_height = self.column_width * 1.0
         self.scraping_thread = Thread()
 
         self.image_output = pn.pane.PNG()
-        self.message_output = pn.pane.HTML('<div id="header" style="width:800px;"></div>')
+        self.message_output = pn.pane.HTML("")
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         # TODO note that vertical is currently broken!
+
+        self.exploration_slider = pn.widgets.FloatSlider(
+            name="Exploration", start=0, end=1, step=0.01, value=0.1
+        )
+        self.recommender = Recommender(G, 1 - self.exploration_slider.value, parameters.seed)
 
         # define UI controls
         go_back_button = MaterialButton(
@@ -250,15 +275,21 @@ class UI:
         go_back_button.on_click = self.go_back
 
         self.hide_watched_checkbox = MaterialSwitch(initial_value=False, width=40)
-        self.hide_watched_checkbox.on_event(
-            "switch_id", "click", self.update_displayed_videos_without_cache
+        self.hide_watched_checkbox.on_event("switch_id", "click", self.update_displayed_videos)
+
+        refresh_button = MaterialButton(
+            label="Refresh",
+            style="width: 110px",
         )
+        refresh_button.on_click = self.update_displayed_videos
 
         top = pn.Row(
             go_back_button,
             pn.Spacer(width=20),
             self.hide_watched_checkbox,
             pn.pane.HTML("Hide watched videos"),
+            self.exploration_slider,
+            refresh_button,
             required_modules,
         )
 
@@ -308,6 +339,7 @@ class UI:
                 self.image_output,
                 top,
                 self.message_output,
+                pn.Spacer(height=5),
                 # adding spacer with a width 0 gives a correct gap for some reason
                 pn.Row(button_box, pn.Spacer(width=0), self.video_wall),
             )
@@ -323,23 +355,24 @@ class UI:
         # TODO # clear video_wall to indicate that something is happening
         # self.video_wall.object = ""
 
-        # self.message_output.object = ""
-        # TODO align message output in a better way, maybe with GridSpec
-        self.message_output.object = '<div id="header" style="width:800px;"></div>'
+        self.message_output.object = ""
 
         tree, img = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
         if self.show_image:
             self.image_output.object = img
 
         video_ids = tree.pre_order()
-
         self.recommender.compute_node_ranks(video_ids)
         self.tree_climber.reset(tree)
-        self.previous_ids_to_show = []
 
-        self.update_displayed_videos_without_cache()
+        self.update_displayed_videos()
 
-    def display_video_grid(self, ids):
+    def display_video_grid(self):
+        self.recommender.cutoff = 1 - self.exploration_slider.value
+        ids = self.recommender.build_wall(
+            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
+        )
+
         if self.orientation == "vertical":
             ids = np.transpose(ids).flatten()
         elif self.orientation == "horizontal":
@@ -357,7 +390,7 @@ class UI:
             if "title" in self.G.nodes[id_]:
                 title = self.G.nodes[id_]["title"]
             else:
-                title = "..."
+                title = ""
             # TODO refine and show video info
             # rank = self.recommender.node_ranks.get(id_)
             # likes_to_views = liked_to_views_ratio(self.G, id_)
@@ -372,48 +405,49 @@ class UI:
         self.video_wall.update()
 
     def choose_column(self, _change, i):
-        self.message_output.object = ""
-
         exit_code = self.tree_climber.choose_column(i)
+        self.message_output.object = self.info_template.format(self.tree_climber.branch_id)
+
         if exit_code == -1:
-            self.message_output.object = "already on the lowest cluster"
+            self.message_output.object = self.info_template.format("already on the lowest cluster")
             return
 
-        self.previous_ids_to_show.append(self.ids_to_show)
-        self.ids_to_show = self.potential_ids_to_show[i]
         self.update_displayed_videos()
 
     def go_back(self, _event):
-        self.message_output.object = ""
-
         exit_code = self.tree_climber.go_back()
+        self.message_output.object = self.info_template.format(self.tree_climber.branch_id)
+
         if exit_code == -1:
-            self.message_output.object = "already on the highest cluster"
+            self.message_output.object = self.info_template.format("already on the highest cluster")
             return
 
-        self.ids_to_show = self.previous_ids_to_show.pop()
-        self.update_displayed_videos()
-
-    def update_displayed_videos_without_cache(self, _event=None):
-        self.ids_to_show = self.recommender.build_wall(
-            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
-        )
-        scrape_from_list(
-            self.ids_to_show,
-            self.driver,
-            skip_if_fresher_than=float("inf"),
-            non_verbose=True,
-            G=self.G,
-        )
         self.update_displayed_videos()
 
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
-        self.display_video_grid(self.ids_to_show)
+        self.display_video_grid()
         # threading is needed, because panel updates its widgets only when the main thread is idle
-        self.scraping_thread = Thread(target=self.fetch_new_videos)
+        self.scraping_thread = Thread(target=self.fetch_current_videos)
         self.scraping_thread.start()
 
-    def fetch_new_videos(self):
+    def fetch_current_videos(self):
+        self.recommender.cutoff = 1 - self.exploration_slider.value
+        ids = self.recommender.build_wall(
+            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
+        )
+
+        # scrape current videos
+        scrape_from_list(
+            ids,
+            self.driver,
+            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
+            non_verbose=True,
+            G=self.G,
+        )
+        # display current videos
+        self.display_video_grid()
+
+        # find potential videos
         self.potential_ids_to_show = []
         for i in range(self.num_of_groups):
             potential_tree = self.tree_climber.children[i]
@@ -430,10 +464,11 @@ class UI:
             )
             self.potential_ids_to_show.append(ids_to_show_in_wall)
 
+        # scrape potential videos in advance
         scrape_from_list(
             self.potential_ids_to_show,
             self.driver,
-            skip_if_fresher_than=float("inf"),
+            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
             non_verbose=True,
             G=self.G,
         )
@@ -449,14 +484,13 @@ logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 
 
 class Parameters(param.Parameterized):
+    seed = param.Integer()
     clustering_balance = param.Number(1.4, bounds=(1, 2.5), step=0.1)
-    recommendation_cutoff = param.Number(0.9, bounds=(0, 1), step=0.01)
     num_of_groups = param.Integer(3, bounds=(2, 10), step=1)
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
     show_image = param.Boolean(True)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
     orientation = param.ObjectSelector("horizontal", ["horizontal", "vertical"])
-    seed = param.Integer()
 
 
 parameters = Parameters(seed=random.randint(1, 1000000))
