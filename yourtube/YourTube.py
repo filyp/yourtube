@@ -55,7 +55,6 @@ class UI:
         driver,
         parameters,
     ):
-        # TODO orientation is temporarily broken
         self.G = G
         self.driver = driver
 
@@ -63,7 +62,6 @@ class UI:
         self.videos_in_group = parameters.videos_in_group
         self.clustering_balance = parameters.clustering_balance
         self.column_width = parameters.column_width
-        self.orientation = parameters.orientation
         self.show_image = parameters.show_image
 
         self.grid_gap = 20
@@ -74,7 +72,6 @@ class UI:
         self.message_output = pn.pane.HTML("")
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         self.recommender = Recommender(G, parameters.seed)
-        # TODO note that vertical is currently broken!
 
         self.exploration_slider = pn.widgets.FloatSlider(
             name="Exploration", start=0, end=1, step=0.01, value=0.1
@@ -110,14 +107,10 @@ class UI:
         self.use_watched = len(list(added_in_last_n_years(G, G.nodes))) < 400
 
         # conscruct group choice buttons
-        if self.orientation == "vertical":
-            # TODO vertical layout
-            label = "⮟"
-        elif self.orientation == "horizontal":
-            button_height = self.column_width * 9 // 16
-            style = f"height: {button_height}px; width: 60px"
-            label = "➤"
-            button_gap = int(self.row_height - button_height)
+        button_height = self.column_width * 9 // 16
+        style = f"height: {button_height}px; width: 60px"
+        label = "➤"
+        button_gap = int(self.row_height - button_height)
         self.choice_buttons = []
         button_box = pn.Column()
         for i in range(self.num_of_groups):
@@ -132,10 +125,7 @@ class UI:
         # pop the last spacer
         button_box.pop(-1)
 
-        if self.orientation == "vertical":
-            num_of_columns = self.num_of_groups
-        elif self.orientation == "horizontal":
-            num_of_columns = self.videos_in_group
+        num_of_columns = self.videos_in_group
         self.video_wall = VideoGrid(
             self.num_of_groups * self.videos_in_group,
             num_of_columns,
@@ -144,18 +134,14 @@ class UI:
             self.grid_gap,
         )
 
-        if self.orientation == "vertical":
-            # TODO vertical layout
-            pass
-        elif self.orientation == "horizontal":
-            self.whole_output = pn.Column(
-                self.image_output,
-                top,
-                self.message_output,
-                pn.Spacer(height=5),
-                # adding spacer with a width 0 gives a correct gap for some reason
-                pn.Row(button_box, pn.Spacer(width=0), self.video_wall),
-            )
+        self.whole_output = pn.Column(
+            self.image_output,
+            top,
+            self.message_output,
+            pn.Spacer(height=5),
+            # adding spacer with a width 0 gives a correct gap for some reason
+            pn.Row(button_box, pn.Spacer(width=0), self.video_wall),
+        )
 
         self.recluster(None)
 
@@ -188,11 +174,7 @@ class UI:
 
     def display_video_grid(self):
         ids = self.recommender.build_wall(self.tree_climber.grandchildren, self.get_recommendation_parameters())
-
-        if self.orientation == "vertical":
-            ids = np.transpose(ids).flatten()
-        elif self.orientation == "horizontal":
-            ids = np.array(ids).flatten()
+        ids = np.array(ids).flatten()
 
         texts = []
         for i, id_ in enumerate(ids):
@@ -305,7 +287,6 @@ class Parameters(param.Parameterized):
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
     show_image = param.Boolean(True)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
-    orientation = param.ObjectSelector("horizontal", ["horizontal", "vertical"])
 
 
 parameters = Parameters(seed=random.randint(1, 1000000))
