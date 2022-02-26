@@ -13,7 +13,7 @@ from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import clustering_cache_template
 from yourtube.filtering_functions import *
-from yourtube.scraping import scrape_from_list
+from yourtube.scraping import Scraper
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -206,6 +206,7 @@ class Engine:
         self.recommender = Recommender(G, parameters.seed)
 
         self.scraping_thread = Thread()
+        self.scraper = Scraper(driver=driver, G=G)
 
         # if there are too few videos in playlists, it's better to also use watched videos
         use_watched = len(list(added_in_last_n_years(self.G, self.G.nodes))) < 400
@@ -254,13 +255,14 @@ class Engine:
     def fetch_videos_background(self, recommendation_parameters):
         ids = self.get_video_ids(recommendation_parameters)
 
+        # if some videos are scraped in the background, cancell them
+        self.scraper.cancel_all_tasks()
+
         # scrape current videos
-        scrape_from_list(
+        self.scraper.scrape_from_list(
             ids,
-            self.driver,
             skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
             non_verbose=True,
-            G=self.G,
         )
         # display current videos
         self.display_callback()
@@ -283,10 +285,8 @@ class Engine:
             self.potential_ids_to_show.append(ids_to_show_in_wall)
 
         # scrape potential videos in advance
-        scrape_from_list(
+        self.scraper.scrape_from_list(
             self.potential_ids_to_show,
-            self.driver,
             skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
             non_verbose=True,
-            G=self.G,
         )

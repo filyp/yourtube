@@ -3,7 +3,7 @@ from time import time
 import networkx as nx
 
 from yourtube import __version__
-from yourtube.scraping import get_content, get_title, scrape_from_list
+from yourtube.scraping import get_content, get_title, Scraper
 
 id_ = "dQw4w9WgXcQ"
 G = nx.DiGraph()
@@ -22,7 +22,8 @@ def test_version():
 
 
 def test_scraping():
-    scrape_from_list([id_], driver=None, non_verbose=True, G=G)
+    with Scraper(driver=None, G=G) as scraper:
+        scraper.scrape_from_list([id_], non_verbose=True)
 
 
 def test_scraping_title():
