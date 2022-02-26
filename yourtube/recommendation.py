@@ -268,6 +268,11 @@ class Engine:
         # display current videos
         self.display_callback()
 
+        if len(self.scraper.futures) != 0:
+            # some other thread already started scraping, 
+            # so skip scraping of the potential videos below, because it's low priority
+            return
+
         # find potential videos
         self.potential_ids_to_show = []
         for i in range(self.num_of_groups):
