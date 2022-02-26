@@ -98,7 +98,8 @@ def update_video(tx, recs, **video_info):
         """
         MATCH (v1:video {video_id: $video_id})-[r:RECOMMENDS]->(v2:video)
         DELETE r
-        """
+        """,
+        video_id=video_info["video_id"],
     )
 
     for rec in recs:
