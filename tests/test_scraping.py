@@ -83,6 +83,6 @@ def test_scraping_keywords():
 
 
 def test_title_special_chars():
-    content = get_content("gmxSGVQEXuc")
+    content, id_ = get_content("gmxSGVQEXuc")
     title = get_title(content)
     assert title == """test"&ŒœŠšŸˆ˜   –—‘’‚“”„†‡‰‹›€~!@#$%^&*()_+[]{};'\\:"|,./?"""

@@ -29,7 +29,7 @@ seconds_in_month = seconds_in_day * 30.4
 def get_content(id_):
     url = id_to_url.format(id_)
     content = requests.get(url, cookies={"CONSENT": "YES+1"}, timeout=60)
-    return content
+    return content, id_
 
 
 def get_transript(id_):
@@ -183,19 +183,9 @@ def scrape_content(content, id_, G=None, driver=None):
             G.add_edge(id_, rec)
 
 
-def get_content_and_save(id_, G=None, driver=None):
-    try:
-        content = get_content(id_)
-    except Exception as ex:
-        # TODO will this even be displayed if it's inside a thread?
-        print("failed to get content of a video: %s" % (ex))
-        return
-    scrape_content(content, id_, G, driver)
-
 class Scraper:
     def __init__(self, driver=None, G=None):
-        # this has to be ThreadPool not ProcessPool, because driver cannot be serialized by pickle
-        self.executor = ThreadPoolExecutor(max_workers=8)
+        self.executor = ProcessPoolExecutor(max_workers=8)
         self.driver = driver
         self.G = G
         # Either driver or G (or both) must be given.
@@ -208,7 +198,7 @@ class Scraper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.executor.shutdown(wait=True)
         return False
-    
+
     def choose_which_video_to_skip(self, ids, skip_if_fresher_than):
         ids_to_scrape = []
         for id_ in ids:
@@ -257,11 +247,9 @@ class Scraper:
                     continue
         return ids_to_scrape
 
-    def scrape_from_list(self, ids, skip_if_fresher_than=None, non_verbose=False, wait=True):
+    def scrape_from_list(self, ids, skip_if_fresher_than=None, non_verbose=False):
         """
         Scrapes videos from the ids list and adds them to neo4j database and/or networkx graph
-
-        note that if wait=False, self.futures can eat up all the RAM if a very large list of ids is provided
 
         ids:
             can be multidimensional, as long as it is convertible to numpy array
@@ -269,10 +257,6 @@ class Scraper:
         skip_if_fresher_than:
             is in seconds
             if set, videos scraped more recently than this time will be skipped
-
-        wait:
-            if set as True, it will block until all the videos get scraped
-            otherwise, it will just submit them to get scraped in the background
 
         """
         # flatten
@@ -283,39 +267,42 @@ class Scraper:
 
         if not non_verbose:
             print(f"skipped {len(ids) - len(ids_to_scrape)} videos")
-        
-        self.futures = set()
+
+        futures = set()
         for id_ in ids_to_scrape:
-            future = self.executor.submit(get_content_and_save, id_, self.G, self.driver)
-            self.futures.add(future)
-            # print(id_)
+            future = self.executor.submit(get_content, id_)
+            futures.add(future)
+        self.futures = futures.copy()
 
-        if wait:
-            for future in tqdm(
-                as_completed(self.futures),
-                total=len(ids_to_scrape),
-                ncols=80,
-                smoothing=0.05,
-                disable=non_verbose,
-            ):
-                try:
-                    res = future.result()
-                    # print(future)
-                except CancelledError:
-                    pass
+        for future in tqdm(
+            as_completed(futures),
+            total=len(ids_to_scrape),
+            ncols=80,
+            smoothing=0.05,
+            disable=non_verbose,
+        ):
+            try:
+                content, id_ = future.result()
+                # print(future)
+                scrape_content(content, id_, self.G, self.driver)
+            except CancelledError:
+                pass
+            except Exception as ex:
+                print("failed to get content of a video: %s" % (ex))
 
-                # delete this entry, to prevent this list from eating all the RAM
-                try:
-                    self.futures.remove(future)
-                except KeyError:
-                    pass
-    
+            # delete this entry, to prevent this list from eating all the RAM
+            futures.remove(future)
+            try:
+                self.futures.remove(future)
+            except KeyError:
+                # some other thread could have changed self.futures
+                pass
+
     def cancel_all_tasks(self):
         # it is a copy, because self.futures can be changexd by other thread while this loop runs
         for future in self.futures.copy():
             future.cancel()
             # print("cancelled: ", future)
-        self.futures = set()
 
 
 def only_added_in_last_n_years(ids_to_add, times_added, n=5):

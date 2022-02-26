@@ -206,6 +206,7 @@ class Engine:
         self.recommender = Recommender(G, parameters.seed)
 
         self.scraping_thread = Thread()
+        # TODO is it a problem if we don't close the scraper and its pool properly, when app closes?
         self.scraper = Scraper(driver=driver, G=G)
 
         # if there are too few videos in playlists, it's better to also use watched videos

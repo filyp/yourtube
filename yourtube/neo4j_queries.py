@@ -93,14 +93,20 @@ def update_video(tx, recs, **video_info):
         **video_info
     )
 
+    # delete previous edges before adding new ones
+    tx.run(
+        """
+        MATCH (v1:video {video_id: $video_id})-[r:RECOMMENDS]->(v2:video)
+        DELETE r
+        """
+    )
+
     for rec in recs:
         # make sure all the recommended nodes are present in the DB
         tx.run(
             "MERGE (v:video {video_id: $rec})",
             rec=rec,
         )
-
-        # TODO delete previous edges
 
         # create edges
         tx.run(
