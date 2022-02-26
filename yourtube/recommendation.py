@@ -2,6 +2,7 @@ import hashlib
 import logging
 import os
 import pickle
+from threading import Thread
 from time import time
 
 import networkx as nx
@@ -12,6 +13,7 @@ from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import clustering_cache_template
 from yourtube.filtering_functions import *
+from yourtube.scraping import scrape_from_list
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -189,3 +191,102 @@ class TreeClimber:
             split_into_n_children(new_child, n=self.videos_in_group) for new_child in new_children
         ]
         return new_children, new_grandchildren
+
+
+class Engine:
+    def __init__(self, G, driver, parameters):
+        self.G = G
+        self.driver = driver
+        self.display_callback = lambda: None
+
+        self.num_of_groups = parameters.num_of_groups
+        self.videos_in_group = parameters.videos_in_group
+
+        self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
+        self.recommender = Recommender(G, parameters.seed)
+
+        self.scraping_thread = Thread()
+
+        # if there are too few videos in playlists, it's better to also use watched videos
+        use_watched = len(list(added_in_last_n_years(self.G, self.G.nodes))) < 400
+        nodes_to_cluster = select_nodes_to_cluster(
+            self.G,
+            use_watched=use_watched,
+        )
+        self._nodes = nodes_to_cluster
+
+        tree, self.dendrogram_img = cluster_subgraph(
+            nodes_to_cluster, self.G, parameters.clustering_balance
+        )
+        video_ids = tree.pre_order()
+        self.recommender.compute_node_ranks(video_ids)
+        self.tree_climber.reset(tree)
+
+    def get_video_ids(self, recommendation_parameters):
+        return self.recommender.build_wall(
+            self.tree_climber.grandchildren, recommendation_parameters
+        )
+
+    def choose_column(self, i):
+        exit_code = self.tree_climber.choose_column(i)
+        return exit_code
+
+    def go_back(self):
+        exit_code = self.tree_climber.go_back()
+        return exit_code
+
+    def get_branch_id(self):
+        return self.tree_climber.branch_id
+
+    def is_video_down(self, video_id):
+        return self.G.nodes[video_id].get("is_down", False)
+
+    def get_video_title(self, video_id):
+        return self.G.nodes[video_id].get("title", "")
+
+    def fetch_videos(self, recommendation_parameters):
+        # threading is needed, because panel updates its widgets only when the main thread is idle
+        self.scraping_thread = Thread(
+            target=self.fetch_videos_background, args=[recommendation_parameters]
+        )
+        self.scraping_thread.start()
+
+    def fetch_videos_background(self, recommendation_parameters):
+        ids = self.get_video_ids(recommendation_parameters)
+
+        # scrape current videos
+        scrape_from_list(
+            ids,
+            self.driver,
+            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
+            non_verbose=True,
+            G=self.G,
+        )
+        # display current videos
+        self.display_callback()
+
+        # find potential videos
+        self.potential_ids_to_show = []
+        for i in range(self.num_of_groups):
+            potential_tree = self.tree_climber.children[i]
+            try:
+                _, potential_grandchildren = self.tree_climber.new_offspring(potential_tree)
+            except ValueError:
+                empty_wall = np.full((self.num_of_groups, self.videos_in_group), "")
+                self.potential_ids_to_show.append(empty_wall)
+                continue
+
+            # potential_granchildren has a dimension: (num_of_groups, videos_in_group)
+            ids_to_show_in_wall = self.recommender.build_wall(
+                potential_grandchildren, recommendation_parameters
+            )
+            self.potential_ids_to_show.append(ids_to_show_in_wall)
+
+        # scrape potential videos in advance
+        scrape_from_list(
+            self.potential_ids_to_show,
+            self.driver,
+            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
+            non_verbose=True,
+            G=self.G,
+        )

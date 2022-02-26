@@ -1,7 +1,6 @@
 import functools
 import logging
 import random
-from threading import Thread
 from time import time
 
 import matplotlib.pyplot as plt
@@ -11,15 +10,13 @@ import param
 from neo4j import GraphDatabase
 
 from yourtube.file_operations import load_graph_from_neo4j
-from yourtube.filtering_functions import *
 from yourtube.html_components import (
     MaterialButton,
     MaterialSwitch,
     VideoGrid,
     required_modules,
 )
-from yourtube.scraping import scrape_from_list
-from yourtube.recommendation import cluster_subgraph, Recommender, TreeClimber
+from yourtube.recommendation import Engine
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -51,27 +48,20 @@ class UI:
 
     def __init__(
         self,
-        G,
-        driver,
+        engine,
         parameters,
     ):
-        self.G = G
-        self.driver = driver
 
+        self.engine = engine
         self.num_of_groups = parameters.num_of_groups
         self.videos_in_group = parameters.videos_in_group
-        self.clustering_balance = parameters.clustering_balance
         self.column_width = parameters.column_width
-        self.show_image = parameters.show_image
 
         self.grid_gap = 20
         self.row_height = self.column_width * 1.0
-        self.scraping_thread = Thread()
 
         self.image_output = pn.pane.PNG()
         self.message_output = pn.pane.HTML("")
-        self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
-        self.recommender = Recommender(G, parameters.seed)
 
         self.exploration_slider = pn.widgets.FloatSlider(
             name="Exploration", start=0, end=1, step=0.01, value=0.1
@@ -102,9 +92,6 @@ class UI:
             refresh_button,
             required_modules,
         )
-
-        # if there are too few videos in playlists, it's better to also use watched videos
-        self.use_watched = len(list(added_in_last_n_years(G, G.nodes))) < 400
 
         # conscruct group choice buttons
         button_height = self.column_width * 9 // 16
@@ -143,29 +130,11 @@ class UI:
             pn.Row(button_box, pn.Spacer(width=0), self.video_wall),
         )
 
-        self.recluster(None)
-
-    def recluster(self, _):
-        nodes_to_cluster = select_nodes_to_cluster(
-            self.G,
-            use_watched=self.use_watched,
-        )
-        self._nodes = nodes_to_cluster
-        # TODO # clear video_wall to indicate that something is happening
-        # self.video_wall.object = ""
-
-        self.message_output.object = ""
-
-        tree, img = cluster_subgraph(nodes_to_cluster, self.G, self.clustering_balance)
-        if self.show_image:
-            self.image_output.object = img
-
-        video_ids = tree.pre_order()
-        self.recommender.compute_node_ranks(video_ids)
-        self.tree_climber.reset(tree)
+        if parameters.show_dendrogram:
+            self.image_output.object = self.engine.dendrogram_img
 
         self.update_displayed_videos()
-    
+
     def get_recommendation_parameters(self):
         return dict(
             hide_watched=self.hide_watched_checkbox.value,
@@ -173,22 +142,19 @@ class UI:
         )
 
     def display_video_grid(self):
-        ids = self.recommender.build_wall(self.tree_climber.grandchildren, self.get_recommendation_parameters())
+        ids = self.engine.get_video_ids(self.get_recommendation_parameters())
         ids = np.array(ids).flatten()
 
         texts = []
         for i, id_ in enumerate(ids):
-            if id_ == "" or G.nodes[id_].get("is_down"):
+            if id_ == "" or self.engine.is_video_down(id_):
                 # it's "" if its cluster turned out empty after filtering
                 # it can also be down
                 ids[i] = "RqJVa0fl01w"  # confused Travolta
                 texts.append("-")
                 continue
             # logger.debug(id_)
-            if "title" in self.G.nodes[id_]:
-                title = self.G.nodes[id_]["title"]
-            else:
-                title = ""
+            title = self.engine.get_video_title(id_)
             # TODO refine and show video info
             # rank = self.recommender.node_ranks.get(id_)
             # likes_to_views = liked_to_views_ratio(self.G, id_)
@@ -203,8 +169,8 @@ class UI:
         self.video_wall.update()
 
     def choose_column(self, _change, i):
-        exit_code = self.tree_climber.choose_column(i)
-        self.message_output.object = self.info_template.format(self.tree_climber.branch_id)
+        exit_code = self.engine.choose_column(i)
+        self.message_output.object = self.info_template.format(self.engine.get_branch_id())
 
         if exit_code == -1:
             self.message_output.object = self.info_template.format("already on the lowest cluster")
@@ -213,8 +179,8 @@ class UI:
         self.update_displayed_videos()
 
     def go_back(self, _event):
-        exit_code = self.tree_climber.go_back()
-        self.message_output.object = self.info_template.format(self.tree_climber.branch_id)
+        exit_code = self.engine.go_back()
+        self.message_output.object = self.info_template.format(self.engine.get_branch_id())
 
         if exit_code == -1:
             self.message_output.object = self.info_template.format("already on the highest cluster")
@@ -224,51 +190,7 @@ class UI:
 
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
         self.display_video_grid()
-        # threading is needed, because panel updates its widgets only when the main thread is idle
-        self.scraping_thread = Thread(target=self.fetch_current_videos)
-        self.scraping_thread.start()
-
-    def fetch_current_videos(self):
-        ids = self.recommender.build_wall(
-            self.tree_climber.grandchildren, self.get_recommendation_parameters()
-        )
-
-        # scrape current videos
-        scrape_from_list(
-            ids,
-            self.driver,
-            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
-            non_verbose=True,
-            G=self.G,
-        )
-        # display current videos
-        self.display_video_grid()
-
-        # find potential videos
-        self.potential_ids_to_show = []
-        for i in range(self.num_of_groups):
-            potential_tree = self.tree_climber.children[i]
-            try:
-                _, potential_grandchildren = self.tree_climber.new_offspring(potential_tree)
-            except ValueError:
-                empty_wall = np.full((self.num_of_groups, self.videos_in_group), "")
-                self.potential_ids_to_show.append(empty_wall)
-                continue
-
-            # potential_granchildren has a dimension: (num_of_groups, videos_in_group)
-            ids_to_show_in_wall = self.recommender.build_wall(
-                potential_grandchildren, self.get_recommendation_parameters()
-            )
-            self.potential_ids_to_show.append(ids_to_show_in_wall)
-
-        # scrape potential videos in advance
-        scrape_from_list(
-            self.potential_ids_to_show,
-            self.driver,
-            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
-            non_verbose=True,
-            G=self.G,
-        )
+        self.engine.fetch_videos(self.get_recommendation_parameters())
 
 
 #######################################################################################
@@ -285,7 +207,7 @@ class Parameters(param.Parameterized):
     clustering_balance = param.Number(1.4, bounds=(1, 2.5), step=0.1)
     num_of_groups = param.Integer(3, bounds=(2, 10), step=1)
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
-    show_image = param.Boolean(True)
+    show_dendrogram = param.Boolean(True)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
 
 
@@ -294,7 +216,9 @@ parameters = Parameters(seed=random.randint(1, 1000000))
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
 
-ui = UI(G, driver, parameters)
+engine = Engine(G, driver, parameters)
+ui = UI(engine, parameters)
+engine.display_callback = ui.display_video_grid
 ui_wrapper = pn.Row(ui.whole_output)
 template.main.append(ui_wrapper)
 
@@ -302,7 +226,11 @@ template.main.append(ui_wrapper)
 def refresh(_event):
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
-    new_ui = UI(G, driver, parameters)
+
+    new_engine = Engine(G, driver, parameters)
+    new_ui = UI(new_engine, parameters)
+    new_engine.display_callback = ui.display_video_grid
+
     template.main[0][0] = new_ui.whole_output
 
 

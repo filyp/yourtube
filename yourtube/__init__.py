@@ -9,8 +9,6 @@ from yourtube.neo4j_queries import create_constraints
 __version__ = "0.7.0"
 
 
-
-
 dir_ = pathlib.Path(__file__).parent.resolve()
 app_path = os.path.join(dir_, "YourTube.py")
 installer_path = os.path.join(dir_, "install.sh")
