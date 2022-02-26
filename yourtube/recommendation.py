@@ -81,11 +81,9 @@ def liked_to_views_ratio(G, id_):
 
 
 class Recommender:
-    def __init__(self, G, cutoff, seed):
+    def __init__(self, G, seed):
         self.G = G
-        self.cutoff = cutoff
         self.seed = seed
-        assert 0 < cutoff < 1
         assert 1 <= seed <= 1000000
 
     def compute_node_ranks(self, ids):
@@ -103,21 +101,22 @@ class Recommender:
             rank = len(in_nodes & source_videos_set)
             self.node_ranks[id_] = rank
 
-    def get_index(self, length):
+    def get_index(self, length, exploration):
+        assert 0 <= exploration <= 1
         np.random.seed(self.seed + length)
-        position = np.random.triangular(self.cutoff, 1, 1)
+        position = np.random.triangular(1 - exploration, 1, 1)
         # other potential distributions are: exponential, lognormal
         index = int(length * position)
         # just to be sure, that we don't get IndexError due to numerical rounding
         index = np.clip(index, 0, length - 1)
         return index
 
-    def recommend_by_in_degree(self, ids):
+    def recommend_by_in_degree(self, ids, params):
         # if there if nothing, return nothing
         if len(ids) == 0:
             return ""
 
-        index = self.get_index(len(ids))
+        index = self.get_index(len(ids), params["exploration"])
 
         ranks = [self.node_ranks[id_] for id_ in ids]
         # find the index on ids list of the video with index'th smallest rank
@@ -125,7 +124,7 @@ class Recommender:
         chosen_id = ids[index_on_ids_list]
         return chosen_id
 
-    def build_wall(self, grandchildren, hide_watched=False):
+    def build_wall(self, grandchildren, params):
         """Given a 2D array of clusters, for each of them recommend one video.
 
         Returns an array of the same dimensions as input.
@@ -137,9 +136,9 @@ class Recommender:
                 # this line is the speed bottleneck
                 ids = grandchild.pre_order()
                 # filter ids
-                if hide_watched:
+                if params["hide_watched"]:
                     ids = list(only_not_watched(self.G, ids))
-                id_to_show = self.recommend_by_in_degree(ids)
+                id_to_show = self.recommend_by_in_degree(ids, params)
                 ids_to_show_in_group.append(id_to_show)
             ids_to_show_in_wall.append(ids_to_show_in_group)
         return ids_to_show_in_wall

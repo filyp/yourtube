@@ -73,12 +73,12 @@ class UI:
         self.image_output = pn.pane.PNG()
         self.message_output = pn.pane.HTML("")
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
+        self.recommender = Recommender(G, parameters.seed)
         # TODO note that vertical is currently broken!
 
         self.exploration_slider = pn.widgets.FloatSlider(
             name="Exploration", start=0, end=1, step=0.01, value=0.1
         )
-        self.recommender = Recommender(G, 1 - self.exploration_slider.value, parameters.seed)
 
         # define UI controls
         go_back_button = MaterialButton(
@@ -180,16 +180,14 @@ class UI:
 
         self.update_displayed_videos()
     
-    # def get_recommendation_parameters(self):
-    #     return dict(
-    #         hide_watched=self.
-    #     )
+    def get_recommendation_parameters(self):
+        return dict(
+            hide_watched=self.hide_watched_checkbox.value,
+            exploration=self.exploration_slider.value,
+        )
 
     def display_video_grid(self):
-        self.recommender.cutoff = 1 - self.exploration_slider.value
-        ids = self.recommender.build_wall(
-            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
-        )
+        ids = self.recommender.build_wall(self.tree_climber.grandchildren, self.get_recommendation_parameters())
 
         if self.orientation == "vertical":
             ids = np.transpose(ids).flatten()
@@ -249,9 +247,8 @@ class UI:
         self.scraping_thread.start()
 
     def fetch_current_videos(self):
-        self.recommender.cutoff = 1 - self.exploration_slider.value
         ids = self.recommender.build_wall(
-            self.tree_climber.grandchildren, self.hide_watched_checkbox.value
+            self.tree_climber.grandchildren, self.get_recommendation_parameters()
         )
 
         # scrape current videos
@@ -278,7 +275,7 @@ class UI:
 
             # potential_granchildren has a dimension: (num_of_groups, videos_in_group)
             ids_to_show_in_wall = self.recommender.build_wall(
-                potential_grandchildren, self.hide_watched_checkbox.value
+                potential_grandchildren, self.get_recommendation_parameters()
             )
             self.potential_ids_to_show.append(ids_to_show_in_wall)
 
