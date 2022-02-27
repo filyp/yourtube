@@ -56,9 +56,9 @@ def get_neighborhood(G, ids):
 
 
 def select_nodes_to_cluster(G, use_watched=False):
-    sources = added_in_last_n_years(G, G.nodes, n=5)
+    sources = added_in_last_n_years(G, list(G.nodes), n=5)
     if use_watched:
-        watched = only_watched(G, G.nodes)
+        watched = only_watched(G, list(G.nodes))
         # note that some videos will be duplicated because of this chain
         # but it's more efficient this way
         sources = chain(sources, watched)

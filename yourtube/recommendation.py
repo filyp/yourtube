@@ -1,7 +1,9 @@
+import glob
 import hashlib
 import logging
 import os
 import pickle
+from pathlib import Path
 from threading import Thread
 from time import time
 
@@ -12,7 +14,7 @@ from krakow.utils import create_dendrogram, split_into_n_children
 from scipy.cluster.hierarchy import to_tree
 from sknetwork.hierarchy import dasgupta_score
 
-from yourtube.file_operations import clustering_cache_template
+from yourtube.file_operations import clustering_cache_template, saved_clusters_template
 from yourtube.filtering_functions import *
 from yourtube.scraping import Scraper
 
@@ -200,9 +202,10 @@ class TreeClimber:
 
 
 class Engine:
-    def __init__(self, G, driver, parameters):
+    def __init__(self, G, driver, user, parameters):
         self.G = G
         self.driver = driver
+        self.user = user
         self.display_callback = lambda: None
 
         self.num_of_groups = parameters.num_of_groups
@@ -216,7 +219,7 @@ class Engine:
         self.scraper = Scraper(driver=driver, G=G)
 
         # if there are too few videos in playlists, it's better to also use watched videos
-        use_watched = len(list(added_in_last_n_years(self.G, self.G.nodes))) < 400
+        use_watched = len(list(added_in_last_n_years(self.G, list(self.G.nodes)))) < 400
         nodes_to_cluster = select_nodes_to_cluster(
             self.G,
             use_watched=use_watched,
@@ -254,6 +257,34 @@ class Engine:
 
     def get_video_title(self, video_id):
         return self.G.nodes[video_id].get("title", "")
+
+    def save_current_cluster(self, cluster_name):
+        tree = self.tree_climber.tree
+        path = saved_clusters_template.format(self.user, cluster_name)
+
+        # make sure user directory exists
+        user_path = os.path.split(path)[0]
+        Path(user_path).mkdir(parents=True, exist_ok=True)
+
+        # save cluster
+        with open(path, "wb") as handle:
+            pickle.dump(tree, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_saved_clusters(self):
+        pattern = saved_clusters_template.format(self.user, "*")
+        cluster_names = []
+        for abs_filename in glob.glob(pattern):
+            filename = os.path.split(abs_filename)[1]
+            cluster_name = filename.split(".")[0]
+            cluster_names.append(cluster_name)
+        return cluster_names
+
+    def load_cluster(self, cluster_name):
+        path = saved_clusters_template.format(self.user, cluster_name)
+        with open(path, "rb") as handle:
+            tree = pickle.load(handle)
+        self.tree_climber.reset(tree)
+        self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):
         # threading is needed, because panel updates its widgets only when the main thread is idle

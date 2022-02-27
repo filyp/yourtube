@@ -107,11 +107,12 @@ class MaterialTextField(ReactiveHTML):
     # source: https://panel.holoviz.org/gallery/components/MaterialUI.html
 
     value = param.String(default="")
+    label = param.String(default="")
 
     _template = """
     <label id="text-field" class="mdc-text-field mdc-text-field--filled">
       <span class="mdc-text-field__ripple"></span>
-      <span class="mdc-floating-label">Label</span>
+      <span class="mdc-floating-label">${label}</span>
       <input id="text-input" type="text" class="mdc-text-field__input" aria-labelledby="my-label" value="${value}"></input>
       <span class="mdc-line-ripple"></span>
     </label>

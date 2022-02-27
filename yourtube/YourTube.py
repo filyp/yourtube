@@ -13,6 +13,7 @@ from yourtube.file_operations import load_graph_from_neo4j
 from yourtube.html_components import (
     MaterialButton,
     MaterialSwitch,
+    MaterialTextField,
     VideoGrid,
     required_modules,
 )
@@ -70,7 +71,7 @@ class UI:
         # define UI controls
         go_back_button = MaterialButton(
             label="Go back",
-            style="width: 110px",
+            style="width: 110px; height:57px",
         )
         go_back_button.on_click = self.go_back
 
@@ -79,9 +80,28 @@ class UI:
 
         refresh_button = MaterialButton(
             label="Refresh",
-            style="width: 110px",
+            style="width: 110px; height:57px",
         )
         refresh_button.on_click = self.update_displayed_videos
+
+        self.cluster_to_save_name_field = MaterialTextField(
+            label="Cluster name",
+            value="Enter cluster name...",
+        )
+        save_cluster_button = MaterialButton(
+            label="Save cluster",
+            style="width: 110px; height:57px",
+        )
+        save_cluster_button.on_click = self.save_current_cluster
+
+        self.saved_cluster_selector = pn.widgets.Select(
+            name="Saved clusters", options=self.engine.get_saved_clusters()
+        )
+        load_cluster_button = MaterialButton(
+            label="Load cluster",
+            style="width: 110px; height:57px",
+        )
+        load_cluster_button.on_click = self.load_cluster
 
         top = pn.Row(
             go_back_button,
@@ -90,6 +110,12 @@ class UI:
             pn.pane.HTML("Hide watched videos"),
             self.exploration_slider,
             refresh_button,
+            pn.Spacer(width=20),
+            self.cluster_to_save_name_field,
+            save_cluster_button,
+            pn.Spacer(width=20),
+            self.saved_cluster_selector,
+            load_cluster_button,
             required_modules,
         )
 
@@ -144,18 +170,6 @@ class UI:
             hide_watched=self.hide_watched_checkbox.value,
             exploration=self.exploration_slider.value,
         )
-    
-    # def deactivate(self):
-    #     top = self.whole_output[1]
-    #     go_back_button = top[0]
-    #     refresh_button = top[5]
-    #     button_box = self.whole_output[-1][0]
-    #     go_back_button.on_click = lambda _event: None
-    #     self.hide_watched_checkbox.on_event("switch_id", "click", lambda _w, _e, _d: None)
-    #     refresh_button.on_click = lambda _event: None
-    #     for button in button_box[::2]:
-    #         button.on_click = lambda _event: None
-
 
     def display_video_grid(self):
         ids = self.engine.get_video_ids(self.get_recommendation_parameters())
@@ -183,7 +197,6 @@ class UI:
         self.video_wall.ids = list(ids)
         self.video_wall.texts = texts
         self.video_wall.update()
-        print(texts)
 
     def choose_column(self, _change, i):
         exit_code = self.engine.choose_column(i)
@@ -205,6 +218,12 @@ class UI:
 
         self.update_displayed_videos()
 
+    def save_current_cluster(self, _event):
+        self.engine.save_current_cluster(self.cluster_to_save_name_field.value)
+
+    def load_cluster(self, _event):
+        self.engine.load_cluster(self.saved_cluster_selector.value)
+
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
         self.display_video_grid()
         self.engine.fetch_videos(self.get_recommendation_parameters())
@@ -213,9 +232,10 @@ class UI:
 #######################################################################################
 
 driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
+user = "default"
 
 start_time = time()
-G = load_graph_from_neo4j(driver, user="default")
+G = load_graph_from_neo4j(driver, user=user)
 logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 
 
@@ -234,7 +254,7 @@ parameters = Parameters(seed=random.randint(1, 1000000))
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
 
-engine = Engine(G, driver, parameters)
+engine = Engine(G, driver, user, parameters)
 ui = UI(engine, parameters)
 engine.display_callback = ui.display_video_grid
 ui_wrapper = pn.Row(ui.whole_output)
@@ -249,7 +269,7 @@ def refresh(_event):
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    engine = Engine(G, driver, parameters)
+    engine = Engine(G, driver, user, parameters)
     ui = UI(engine, parameters)
     engine.display_callback = ui.display_video_grid
 

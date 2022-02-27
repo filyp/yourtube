@@ -9,3 +9,5 @@ tests/__pycache__
 commit_message.txt
 .vscode
 *.ipynb
+tests/G_example.pickle
+tests/nodes_to_cluster_example.pickle

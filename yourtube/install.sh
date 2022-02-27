@@ -5,6 +5,7 @@ echo -e "\n\nDownloading and installing neo4j..."
 mkdir -p $HOME/.yourtube
 mkdir -p $HOME/.yourtube/clustering_cache
 mkdir -p $HOME/.yourtube/graph_cache
+mkdir -p $HOME/.yourtube/saved_clusters
 cd $HOME/.yourtube
 wget "https://neo4j.com/artifact.php?name=neo4j-community-4.4.4-unix.tar.gz" -O "neo4j.tar.gz"
 tar -xf neo4j.tar.gz

@@ -1,6 +1,11 @@
 import logging
 import re
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed, CancelledError
+from concurrent.futures import (
+    CancelledError,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    as_completed,
+)
 from time import time
 
 import numpy as np

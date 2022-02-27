@@ -23,6 +23,7 @@ id_to_url = "https://www.youtube.com/watch?v={}"
 home = os.path.expanduser("~")
 graph_path_template = os.path.join(home, ".yourtube", "graph_cache", "{}.pickle")
 clustering_cache_template = os.path.join(home, ".yourtube", "clustering_cache", "{}.pickle")
+saved_clusters_template = os.path.join(home, ".yourtube", "saved_clusters", "{}", "{}.pickle")
 transcripts_path = os.path.join(home, ".yourtube", "transcripts.json")
 playlists_path = os.path.join(
     home, ".yourtube", "Takeout", "YouTube and YouTube Music", "playlists"
