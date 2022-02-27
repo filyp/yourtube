@@ -1123,6 +1123,18 @@ examples = ["matplotlib (>=2.2.3)", "scikit-image (>=0.14.5)", "pandas (>=0.25.0
 tests = ["matplotlib (>=2.2.3)", "scikit-image (>=0.14.5)", "pandas (>=0.25.0)", "pytest (>=5.0.1)", "pytest-cov (>=2.9.0)", "flake8 (>=3.8.2)", "black (>=21.6b0)", "mypy (>=0.770)", "pyamg (>=4.0.0)"]
 
 [[package]]
+name = "scikit-network"
+version = "0.24.0"
+description = "Graph algorithms"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.20.2"
+scipy = ">=1.6.2"
+
+[[package]]
 name = "scipy"
 version = "1.8.0"
 description = "SciPy: Scientific Library for Python"
@@ -1473,7 +1485,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "d94a7d55170a2bdd7c59779b58992db0ab2ece29fccb5fe0adaf4731f66368e6"
+content-hash = "23c09f03daa6b6efd56faaa9448741ec73191e424259aa511701638990669cff"
 
 [metadata.files]
 appnope = [
@@ -2211,6 +2223,18 @@ scikit-learn = [
     {file = "scikit_learn-1.0.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ff746a69ff2ef25f62b36338c615dd15954ddc3ab8e73530237dd73235e76d62"},
     {file = "scikit_learn-1.0.2-cp39-cp39-win32.whl", hash = "sha256:e174242caecb11e4abf169342641778f68e1bfaba80cd18acd6bc84286b9a534"},
     {file = "scikit_learn-1.0.2-cp39-cp39-win_amd64.whl", hash = "sha256:b54a62c6e318ddbfa7d22c383466d38d2ee770ebdb5ddb668d56a099f6eaf75f"},
+]
+scikit-network = [
+    {file = "scikit-network-0.24.0.tar.gz", hash = "sha256:e25598e4990f0cb9cf736090b16810666ec0367d356283e991818e8b544aad5a"},
+    {file = "scikit_network-0.24.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:a091c07987613e817f409c21616734eef9c867ac4afb50fda83db69db31f254f"},
+    {file = "scikit_network-0.24.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:ec20aa234960c39df45b06788687788c629118d4d39a6fe87c4f99acc1e69f71"},
+    {file = "scikit_network-0.24.0-cp37-cp37m-win_amd64.whl", hash = "sha256:f0ac1e17691ad4caca1136731c76e698f95851f0d93f6cbce1097cbb90480ca7"},
+    {file = "scikit_network-0.24.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7b943bcbdbf3fb91bd2d8cc2722d3256663bbbf46be82f2f1b66dfcddb3eccbf"},
+    {file = "scikit_network-0.24.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:5a9a7c3f0ba0afe6d84e610dc4d5d618736758306859ef3531875926ee1d1110"},
+    {file = "scikit_network-0.24.0-cp38-cp38-win_amd64.whl", hash = "sha256:0467d19db67198068ea17e09c07ecb8d82775a821f4deaef8d53c5c1ee77db0e"},
+    {file = "scikit_network-0.24.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:93f8dd7cc46a9292578d879fb7f513aae78ada8449407e52cc0f8b254d619ada"},
+    {file = "scikit_network-0.24.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:b651901c46d34621e70452415762a9a2fb2edf6d3cc8ecaa906901f374050068"},
+    {file = "scikit_network-0.24.0-cp39-cp39-win_amd64.whl", hash = "sha256:0833209f621f3d652a4cac3080b974aa92c6ddf27f5b63eb7f471d0ea4c5aa2e"},
 ]
 scipy = [
     {file = "scipy-1.8.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:87b01c7d5761e8a266a0fbdb9d88dcba0910d63c1c671bdb4d99d29f469e9e03"},

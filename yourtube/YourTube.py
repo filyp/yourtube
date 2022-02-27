@@ -131,7 +131,11 @@ class UI:
         )
 
         if parameters.show_dendrogram:
-            self.image_output.object = self.engine.dendrogram_img
+            # image can be None
+            if self.engine.dendrogram_img is None:
+                print("cannot display image: no image in cache")
+            else:
+                self.image_output.object = self.engine.dendrogram_img
 
         self.update_displayed_videos()
 
@@ -140,6 +144,18 @@ class UI:
             hide_watched=self.hide_watched_checkbox.value,
             exploration=self.exploration_slider.value,
         )
+    
+    # def deactivate(self):
+    #     top = self.whole_output[1]
+    #     go_back_button = top[0]
+    #     refresh_button = top[5]
+    #     button_box = self.whole_output[-1][0]
+    #     go_back_button.on_click = lambda _event: None
+    #     self.hide_watched_checkbox.on_event("switch_id", "click", lambda _w, _e, _d: None)
+    #     refresh_button.on_click = lambda _event: None
+    #     for button in button_box[::2]:
+    #         button.on_click = lambda _event: None
+
 
     def display_video_grid(self):
         ids = self.engine.get_video_ids(self.get_recommendation_parameters())
@@ -167,6 +183,7 @@ class UI:
         self.video_wall.ids = list(ids)
         self.video_wall.texts = texts
         self.video_wall.update()
+        print(texts)
 
     def choose_column(self, _change, i):
         exit_code = self.engine.choose_column(i)
@@ -204,10 +221,11 @@ logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 
 class Parameters(param.Parameterized):
     seed = param.Integer()
-    clustering_balance = param.Number(1.4, bounds=(1, 2.5), step=0.1)
+    clustering_balance_a = param.Number(1.5, bounds=(1, 2.5), step=0.1)
+    clustering_balance_b = param.Number(1, bounds=(1, 2.5), step=0.1)
     num_of_groups = param.Integer(3, bounds=(2, 10), step=1)
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
-    show_dendrogram = param.Boolean(True)
+    show_dendrogram = param.Boolean(False)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
 
 
@@ -224,14 +242,18 @@ template.main.append(ui_wrapper)
 
 
 def refresh(_event):
+    # it looks that it needs to be global, so that ui gets dereferenced, and can disappear
+    # otherwise it is still bound to the new panel buttons, probably due to some panel quirk
+    # and this causes each click to be executed double
+    global ui, engine
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    new_engine = Engine(G, driver, parameters)
-    new_ui = UI(new_engine, parameters)
-    new_engine.display_callback = ui.display_video_grid
+    engine = Engine(G, driver, parameters)
+    ui = UI(engine, parameters)
+    engine.display_callback = ui.display_video_grid
 
-    template.main[0][0] = new_ui.whole_output
+    template.main[0][0] = ui.whole_output
 
 
 refresh_button = pn.widgets.Button(name="Refresh")

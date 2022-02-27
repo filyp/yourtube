@@ -10,6 +10,7 @@ import numpy as np
 from krakow import krakow
 from krakow.utils import create_dendrogram, split_into_n_children
 from scipy.cluster.hierarchy import to_tree
+from sknetwork.hierarchy import dasgupta_score
 
 from yourtube.file_operations import clustering_cache_template
 from yourtube.filtering_functions import *
@@ -19,14 +20,17 @@ logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
 
 
-def cluster_subgraph(nodes_to_cluster, G, balance=2):
+def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, create_image=True):
+    # note that using create_image=False opens the possibility, that the cached image will be None
+    # so watchout for that
+
     # use cache
     # here we assume that the same set of nodes will have the same graph structure
     # this is not true, but collisions are very rare and not destructive
     sorted_nodes = sorted(nodes_to_cluster)
     unique_string = "".join(sorted_nodes)
     node_hash = hashlib.md5(unique_string.encode()).hexdigest()
-    unique_string = f"{balance:.1f}_{node_hash}"
+    unique_string = f"{balance_alpha:.2f}_{balance_beta:.2f}_{node_hash}"
     cache_file = clustering_cache_template.format(unique_string)
     if os.path.isfile(cache_file):
         logger.info(f"using cached clustering: {cache_file}")
@@ -48,9 +52,9 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
     main_component = components[0]
     Main = Recent.subgraph(main_component)
 
-    D = krakow(Main, alpha=balance, beta=1)
+    D = krakow(Main, alpha=balance_alpha, beta=balance_beta)
     tree = to_tree(D)
-    # normalized_dasgupta_cost(Main, D)
+    clustering_quality = dasgupta_score(nx.to_scipy_sparse_matrix(Main), D)
 
     # convert leaf values to original ids
     main_ids_list = np.array(Main.nodes)
@@ -62,13 +66,15 @@ def cluster_subgraph(nodes_to_cluster, G, balance=2):
 
     logger.info(f"clustering took: {time() - start_time:.3f} seconds")
 
-    # create image
-    img = create_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
+    if create_image:
+        img = create_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
+    else:
+        img = None
 
     # save to cache
     with open(cache_file, "wb") as handle:
-        pickle.dump((tree, img), handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return tree, img
+        pickle.dump((tree, img, clustering_quality), handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return tree, img, clustering_quality
 
 
 # ranking functions
@@ -217,8 +223,11 @@ class Engine:
         )
         self._nodes = nodes_to_cluster
 
-        tree, self.dendrogram_img = cluster_subgraph(
-            nodes_to_cluster, self.G, parameters.clustering_balance
+        tree, self.dendrogram_img, clustering_quality = cluster_subgraph(
+            nodes_to_cluster,
+            self.G,
+            parameters.clustering_balance_a,
+            parameters.clustering_balance_b,
         )
         video_ids = tree.pre_order()
         self.recommender.compute_node_ranks(video_ids)
@@ -269,7 +278,7 @@ class Engine:
         self.display_callback()
 
         if len(self.scraper.futures) != 0:
-            # some other thread already started scraping, 
+            # some other thread already started scraping,
             # so skip scraping of the potential videos below, because it's low priority
             return
 
