@@ -10,9 +10,8 @@ from time import time
 import networkx as nx
 import numpy as np
 from krakow import krakow
-from krakow.utils import create_dendrogram, split_into_n_children
+from krakow.utils import create_dendrogram, split_into_n_children, normalized_dasgupta_cost
 from scipy.cluster.hierarchy import to_tree
-from sknetwork.hierarchy import dasgupta_score
 
 from yourtube.file_operations import clustering_cache_template, saved_clusters_template
 from yourtube.filtering_functions import *
@@ -56,7 +55,7 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
 
     D = krakow(Main, alpha=balance_alpha, beta=balance_beta)
     tree = to_tree(D)
-    clustering_quality = dasgupta_score(nx.to_scipy_sparse_matrix(Main), D)
+    clustering_quality = 1 - normalized_dasgupta_cost(nx.to_scipy_sparse_matrix(Main), D)
 
     # convert leaf values to original ids
     main_ids_list = np.array(Main.nodes)
