@@ -1,6 +1,17 @@
 # Installation
 
-First, ensure that you have JDK 11 installed. Then run:
+## Install OpenJDK11
+
+For example on macOS:
+```
+brew install openjdk11
+```
+Or on Ubuntu:
+```
+sudo apt install openjdk-11-jdk
+```
+
+## Install YourTube
 
 ```bash
 pip install poetry
@@ -9,6 +20,8 @@ cd yourtube
 poetry install
 poetry run yourtube-install
 ```
+
+## Export YouTube data and scrape it
 
 Then, follow instructions from README to export youtube data, and run:
 ```

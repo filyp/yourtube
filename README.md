@@ -47,10 +47,25 @@ You can play with the demo [here](http://yourtube.quest). It's meant only to sho
 
 ## Installation
 
+## Install OpenJDK11
+
+For example on macOS:
+```
+brew install openjdk11
+```
+Or on Ubuntu:
+```
+sudo apt install openjdk-11-jdk
+```
+
+## Install Yourtube
+
 ```
 pip install yourtube
 yourtube-install
 ```
+
+## Export YouTube data and scrape it
 
 Now export your data from youtube with these steps (sadly this cannot be automated):
 1. Login to your YouTube account
