@@ -14,7 +14,7 @@ sudo apt install openjdk-11-jdk
 ## Install YourTube
 
 ```bash
-pip install poetry
+pip3 install poetry
 git clone git@github.com:filyp/YourTube.git
 cd yourtube
 poetry install

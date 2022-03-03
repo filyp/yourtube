@@ -61,7 +61,7 @@ sudo apt install openjdk-11-jdk
 ## Install Yourtube
 
 ```
-pip install yourtube
+pip3 install yourtube
 yourtube-install
 ```
 
