@@ -55,7 +55,7 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
 
     D = krakow(Main, alpha=balance_alpha, beta=balance_beta)
     tree = to_tree(D)
-    clustering_quality = 1 - normalized_dasgupta_cost(nx.to_scipy_sparse_matrix(Main), D)
+    clustering_quality = 1 - normalized_dasgupta_cost(Main, D)
 
     # convert leaf values to original ids
     main_ids_list = np.array(Main.nodes)
