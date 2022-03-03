@@ -1,5 +1,7 @@
 # Installation
 
+First, ensure that you have JDK 11 installed. Then run:
+
 ```bash
 pip install poetry
 git clone git@github.com:filyp/YourTube.git
