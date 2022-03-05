@@ -45,25 +45,20 @@ You can play with the demo [here](http://yourtube.quest). It's meant only to sho
 - For these reasons, it's better to start with an existing recomender system as a "bottom layer", and then build any new features we want, on top of it. 
 </details>
 
-## Installation
+# Installation
 
-## Install OpenJDK11
+```bash
+git clone git@github.com:filyp/YourTube.git
+cd yourtube
+docker-compose build
 
-For example on macOS:
+mkdir -p ~/yourtube/data/clustering_cache
+mkdir -p ~/yourtube/data/graph_cache
+mkdir -p ~/yourtube/data/saved_clusters
+docker-compose run yourtube poetry run yourtube-install
 ```
-brew install openjdk11
-```
-Or on Ubuntu:
-```
-sudo apt install openjdk-11-jdk
-```
+TODO create all needed dirs in yourtube-install
 
-## Install Yourtube
-
-```
-pip3 install yourtube
-yourtube-install
-```
 
 ## Export YouTube data and scrape it
 
@@ -78,35 +73,19 @@ Now export your data from youtube with these steps (sadly this cannot be automat
 8. Click "Next step"
 9. Select your preferred method of delivery (Email, Dropbox, etc.) and click on "Create Export"
 10. Download the .zip file
-11. Extract it into `~/.yourtube`, so that you have the structure: `~/.yourtube/Takeout/...`
+11. Extract it into `~/yourtube/data`, so that you have the structure: `~/yourtube/data/Takeout/...`
 
 Now run:
-```
-yourtube-scrape
-```
-
-It will collect recommendations from the videos in your playlists and from your liked videos, which can take a few hours.
-
-For best experience also run:
-```
-yourtube-scrape-watched
+```bash
+docker-compose run yourtube poetry run yourtube-scrape
+docker-compose run yourtube poetry run yourtube-scrape-watched
 ```
 
-Now, you can explore your recommendations by running:
+It will collect recommendations from the videos in your playlists and from your liked videos, which can take up to an hour.
+
+
+## Running
+
+```bash
+docker-compose up
 ```
-yourtube
-```
-
-# Customization
-
-All the parameters can be set in URL query like this: 
-
-http://localhost:8866/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
-
-or for the demo:
-
-http://yourtube.quest/?num_of_groups=3&videos_in_group=4&clustering_balance=1.4&recommendation_cutoff=0.7&column_width=1000
-
-`recommendation_cutoff` must be between 0 and 1; the higher, the more predictable the recommendations; low values are good for content exploration
-
-`clustering_balance` must be greater or equal to 1, generally values between 1.3 and 2 are fine

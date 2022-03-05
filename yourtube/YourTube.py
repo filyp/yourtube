@@ -231,7 +231,7 @@ class UI:
 
 #######################################################################################
 
-driver = GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "yourtube"))
+driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 user = "default"
 
 start_time = time()
