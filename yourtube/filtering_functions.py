@@ -22,6 +22,9 @@ def added_in_last_n_years(G, ids, n=5):
 
 def only_not_watched(G, ids):
     for id_ in ids:
+        if id_ not in G.nodes:
+            yield id_ # if it's not in the graph, assume it's not watched
+            continue
         node = G.nodes[id_]
         if not node.get("watched"):
             yield id_
@@ -29,6 +32,9 @@ def only_not_watched(G, ids):
 
 def only_watched(G, ids):
     for id_ in ids:
+        if id_ not in G.nodes:
+            # if it's not in the graph, assume it's not watched
+            continue
         node = G.nodes[id_]
         if node.get("watched"):
             yield id_

@@ -259,6 +259,7 @@ class Engine:
 
     def save_current_cluster(self, cluster_name):
         tree = self.tree_climber.tree
+        node_ranks = self.recommender.node_ranks
         path = saved_clusters_template.format(self.user, cluster_name)
 
         # make sure user directory exists
@@ -267,7 +268,7 @@ class Engine:
 
         # save cluster
         with open(path, "wb") as handle:
-            pickle.dump(tree, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump((tree, node_ranks), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def get_saved_clusters(self):
         pattern = saved_clusters_template.format(self.user, "*")
@@ -281,8 +282,9 @@ class Engine:
     def load_cluster(self, cluster_name):
         path = saved_clusters_template.format(self.user, cluster_name)
         with open(path, "rb") as handle:
-            tree = pickle.load(handle)
+            tree, node_ranks = pickle.load(handle)
         self.tree_climber.reset(tree)
+        self.recommender.node_ranks = node_ranks
         self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):

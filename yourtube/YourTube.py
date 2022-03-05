@@ -159,7 +159,7 @@ class UI:
         if parameters.show_dendrogram:
             # image can be None
             if self.engine.dendrogram_img is None:
-                print("cannot display image: no image in cache")
+                logger.info("cannot display image: no image in cache")
             else:
                 self.image_output.object = self.engine.dendrogram_img
 
@@ -241,7 +241,7 @@ logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
 
 class Parameters(param.Parameterized):
     seed = param.Integer()
-    clustering_balance_a = param.Number(1.5, bounds=(1, 2.5), step=0.1)
+    clustering_balance_a = param.Number(1.7, bounds=(1, 2.5), step=0.1)
     clustering_balance_b = param.Number(1, bounds=(1, 2.5), step=0.1)
     num_of_groups = param.Integer(3, bounds=(2, 10), step=1)
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)

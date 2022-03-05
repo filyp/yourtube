@@ -7,11 +7,11 @@ mkdir -p $HOME/.yourtube/clustering_cache
 mkdir -p $HOME/.yourtube/graph_cache
 mkdir -p $HOME/.yourtube/saved_clusters
 cd $HOME/.yourtube
-curl -L "https://neo4j.com/artifact.php?name=neo4j-community-4.4.4-unix.tar.gz" -o "neo4j.tar.gz"
+curl -L "https://neo4j.com/artifact.php?name=neo4j-community-4.4.1-unix.tar.gz" -o "neo4j.tar.gz"
 
 tar -xf neo4j.tar.gz
 rm neo4j.tar.gz
-mv neo4j-community-4.4.4 neo4j
+mv neo4j-community-4.4.1 neo4j
 
 # echo -e "\n\nInstalling JDK 11..."
 # . /etc/os-release
