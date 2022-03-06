@@ -14,9 +14,9 @@ services:
       NEO4J_AUTH: neo4j/yourtube
 
   yourtube:
-    image: yourtube
-    # hostname: yourtube
+    image: filyp/yourtube:latest
     container_name: yourtube-release
+    # hostname: yourtube
     # restart: always
     depends_on:
         - neo4j

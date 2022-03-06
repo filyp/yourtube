@@ -48,13 +48,8 @@ You can play with the demo [here](http://yourtube.quest). It's meant only to sho
 # Installation
 
 ```bash
-git clone git@github.com:filyp/YourTube.git
-cd yourtube
-docker-compose build
-
-docker-compose run yourtube poetry run yourtube-install
+mkdir -p ~/yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/master/docker-compose-release.yml > ~/yourtube/yourtube.yml ; docker-compose -f ~/yourtube/yourtube.yml run yourtube poetry run yourtube-install
 ```
-
 
 ## Export YouTube data and scrape it
 
@@ -73,8 +68,8 @@ Now export your data from youtube with these steps (sadly this cannot be automat
 
 Now run:
 ```bash
-docker-compose run yourtube poetry run yourtube-scrape
-docker-compose run yourtube poetry run yourtube-scrape-watched
+docker-compose -f ~/yourtube/yourtube.yml run yourtube poetry run yourtube-scrape
+docker-compose -f ~/yourtube/yourtube.yml run yourtube poetry run yourtube-scrape-watched
 ```
 
 It will collect recommendations from the videos in your playlists and from your liked videos, which can take up to an hour.
@@ -83,5 +78,5 @@ It will collect recommendations from the videos in your playlists and from your 
 ## Running
 
 ```bash
-docker-compose up
+docker-compose -f ~/yourtube/yourtube.yml up
 ```
