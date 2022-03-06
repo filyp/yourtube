@@ -263,8 +263,7 @@ class Engine:
         path = saved_clusters_template.format(self.user, cluster_name)
 
         # make sure user directory exists
-        user_path = os.path.split(path)[0]
-        Path(user_path).mkdir(parents=True, exist_ok=True)
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
 
         # save cluster
         with open(path, "wb") as handle:

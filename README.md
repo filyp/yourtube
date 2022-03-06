@@ -52,12 +52,8 @@ git clone git@github.com:filyp/YourTube.git
 cd yourtube
 docker-compose build
 
-mkdir -p ~/yourtube/data/clustering_cache
-mkdir -p ~/yourtube/data/graph_cache
-mkdir -p ~/yourtube/data/saved_clusters
 docker-compose run yourtube poetry run yourtube-install
 ```
-TODO create all needed dirs in yourtube-install
 
 
 ## Export YouTube data and scrape it
