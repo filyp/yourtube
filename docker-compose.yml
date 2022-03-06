@@ -4,7 +4,7 @@ services:
     image: neo4j:4.4.4
     restart: always
     # hostname: neo4j-yt
-    container_name: neo4j-yt
+    # container_name: neo4j-yt
     ports:
       - 7474:7474
       - 7687:7687
@@ -18,7 +18,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # hostname: yourtube
-    container_name: yourtube
+    # container_name: yourtube
     # restart: always
     depends_on:
         - neo4j

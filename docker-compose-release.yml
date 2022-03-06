@@ -4,7 +4,7 @@ services:
     image: neo4j:4.4.4
     restart: always
     # hostname: neo4j-yt
-    container_name: neo4j-yt-release
+    # container_name: neo4j-yt-release
     ports:
       - 7474:7474
       - 7687:7687
@@ -15,7 +15,7 @@ services:
 
   yourtube:
     image: filyp/yourtube:latest
-    container_name: yourtube-release
+    # container_name: yourtube-release
     # hostname: yourtube
     # restart: always
     depends_on:
