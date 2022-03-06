@@ -9,7 +9,7 @@ services:
       - 7474:7474
       - 7687:7687
     volumes:
-       - $HOME/yourtube/neo4j/data:/data
+       - $HOME/.yourtube/neo4j/data:/data
     environment:
       NEO4J_AUTH: neo4j/yourtube
 
@@ -23,6 +23,6 @@ services:
     depends_on:
         - neo4j
     volumes:
-      - $HOME/yourtube/data:/yourtube/data
+      - $HOME/.yourtube/data:/yourtube/data
     ports:
       - "8866:8866"
