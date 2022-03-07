@@ -78,5 +78,5 @@ It will collect recommendations from the videos in your playlists and from your 
 ## Running
 
 ```bash
-docker-compose -f ~/.yourtube/yourtube.yml up
+docker-compose -f ~/.yourtube/yourtube.yml down ; docker-compose -f ~/.yourtube/yourtube.yml up -d
 ```
