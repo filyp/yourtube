@@ -361,7 +361,7 @@ def scrape_all_playlists(username="default", years=5):
 
 
 def scrape_watched():
-    driver = GraphDatabase.driver("neo4://neo4j:7687", auth=("neo4j", "yourtube"))
+    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 
     id_to_watched_times = get_youtube_watched_ids()
     # note: it looks that in watched videos, there are only stored watches from the last 5 years

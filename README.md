@@ -80,3 +80,5 @@ It will collect recommendations from the videos in your playlists and from your 
 ```bash
 docker-compose -f ~/.yourtube/yourtube.yml down ; docker-compose -f ~/.yourtube/yourtube.yml up -d
 ```
+
+YourTube shuld be now available at: `http://localhost:8866/`
