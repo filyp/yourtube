@@ -201,10 +201,10 @@ class TreeClimber:
 
 
 class Engine:
-    def __init__(self, G, driver, user, parameters):
+    def __init__(self, G, driver, parameters):
         self.G = G
         self.driver = driver
-        self.user = user
+        self.user = parameters.username
         self.display_callback = lambda: None
 
         self.num_of_groups = parameters.num_of_groups

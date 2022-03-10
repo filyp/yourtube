@@ -231,14 +231,6 @@ class UI:
 
 #######################################################################################
 
-driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
-user = "default"
-
-start_time = time()
-G = load_graph_from_neo4j(driver, user=user)
-logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
-
-
 class Parameters(param.Parameterized):
     seed = param.Integer()
     clustering_balance_a = param.Number(1.7, bounds=(1, 2.5), step=0.1)
@@ -247,29 +239,34 @@ class Parameters(param.Parameterized):
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
     show_dendrogram = param.Boolean(False)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
+    username = param.String(default="default")
 
 
 parameters = Parameters(seed=random.randint(1, 1000000))
+takeout_file_input = pn.widgets.FileInput()
+
+driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
-
-engine = Engine(G, driver, user, parameters)
-ui = UI(engine, parameters)
-engine.display_callback = ui.display_video_grid
-ui_wrapper = pn.Row(ui.whole_output)
-template.main.append(ui_wrapper)
+template.main.append(pn.Row([pn.Spacer()]))
 
 
 def refresh(_event):
     # it looks that it needs to be global, so that ui gets dereferenced, and can disappear
     # otherwise it is still bound to the new panel buttons, probably due to some panel quirk
     # and this causes each click to be executed double
-    global ui, engine
+    global ui, engine, G, takeout_file_input
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    engine = Engine(G, driver, user, parameters)
+    
+
+    start_time = time()
+    G = load_graph_from_neo4j(driver, user=parameters.username)
+    logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
+
+    engine = Engine(G, driver, parameters)
     ui = UI(engine, parameters)
     engine.display_callback = ui.display_video_grid
 
@@ -280,5 +277,8 @@ refresh_button = pn.widgets.Button(name="Refresh")
 refresh_button.on_click(refresh)
 
 template.sidebar.append(parameters)
+template.sidebar.append(takeout_file_input)
 template.sidebar.append(refresh_button)
 template.servable()
+
+refresh(None)
