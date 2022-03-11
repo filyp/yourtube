@@ -64,15 +64,23 @@ graph format:
         ...
 """
 
+# todo a uniqueness constraint on playlist could be added
+# for the pair (playlist_name, username)
+# but is it even supported in free version of neo4j?
 
-# create a uniqueness constraint on video_id
+
 @query
-def create_constraints(tx):
+def create_video_id_constraint(tx):
     """
-    CREATE CONSTRAINT ON (v:video) ASSERT v.video_id IS UNIQUE
+    CREATE CONSTRAINT video_id_unique IF NOT EXISTS FOR (v:video) REQUIRE v.video_id IS UNIQUE
     """
-    # todo a uniqueness constraint on playlist could be added
-    # for the pair (playlist_name, username)
+
+
+@query
+def create_username_constraint(tx):
+    """
+    CREATE CONSTRAINT username_unique IF NOT EXISTS FOR (u:user) REQUIRE u.username IS UNIQUE
+    """
 
 
 def update_video(tx, recs, **video_info):
@@ -181,17 +189,17 @@ def get_all_user_relevant_playlist_info(username):
 def get_limited_user_relevant_video_info(username):
     """
     MATCH (p:playlist {username: $username})-[:HAS]->(v1:video)-[:RECOMMENDS]->(v2:video)
-    RETURN v1.video_id, v1.title, v1.view_count, v1.like_count, v1.time_scraped, v1.is_down, v1.watched, v2.video_id, v2.title, v2.view_count, v2.like_count, v2.time_scraped, v2.is_down, v2.watched
+    RETURN v1.video_id, v1.title, v1.view_count, v1.like_count, v1.time_scraped, v1.is_down, v2.video_id, v2.title, v2.view_count, v2.like_count, v2.time_scraped, v2.is_down
     """
 
 
-@query
-def add_watched_times(video_id, watched_times):
-    """
-    MATCH (v:video {video_id: $video_id})
-    SET v.watched_times = $watched_times
-    SET v.watched = true
-    """
+# @query
+# def add_watched_times(video_id, watched_times):
+#     """
+#     MATCH (v:video {video_id: $video_id})
+#     SET v.watched_times = $watched_times
+#     SET v.watched = true
+#     """
 
 
 @query
@@ -199,4 +207,18 @@ def check_if_this_video_was_scraped(video_id):
     """
     MATCH (v:video {video_id: $video_id})
     RETURN v.time_scraped, v.is_down
+    """
+
+
+@query
+def ensure_user_exists(username):
+    "MERGE (u:user {username: $username})"
+
+
+@query
+def add_watched_times(username, video_id, watched_times):
+    """
+    MATCH (u:user {username: $username}), (v:video {video_id: $video_id})
+    MERGE (u)-[r:WATCHED]->(v)
+    SET r.watched_times = $watched_times
     """

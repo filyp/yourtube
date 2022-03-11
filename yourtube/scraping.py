@@ -24,10 +24,12 @@ from yourtube.file_operations import (
     get_youtube_playlist_ids,
     get_youtube_watched_ids,
     id_to_url,
+    get_usernames,
 )
 from yourtube.neo4j_queries import *
 
 seconds_in_day = 60 * 60 * 24
+seconds_in_week = 60 * 60 * 24 * 7
 seconds_in_month = seconds_in_day * 30.4
 
 
@@ -327,10 +329,10 @@ def only_added_in_last_n_years(ids_to_add, times_added, n=5):
 
 
 def scrape_playlist(
-    username, playlist_name, driver, years=5, skip_if_fresher_than=seconds_in_month
+    username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
 ):
-    ids_to_add, times_added = get_youtube_playlist_ids(playlist_name)
-    ids_to_add, times_added = only_added_in_last_n_years(ids_to_add, times_added, n=years)
+    ids_to_add, times_added = get_youtube_playlist_ids(playlist_name, username)
+    ids_to_add, times_added = only_added_in_last_n_years(ids_to_add, times_added, n=scrape_from_last_n_years)
 
     with Scraper(driver=driver, G=None) as scraper:
         scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=skip_if_fresher_than)
@@ -349,40 +351,54 @@ def scrape_playlist(
 # exposed functions:
 
 
-def scrape_all_playlists(username="default", years=5):
+def scrape_all_playlists(scrape_from_last_n_years=3, skip_if_fresher_than=seconds_in_week, save_watched_data_to_db=False):
     driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 
-    for playlist_name in get_playlist_names():
-        print()
-        print("scraping: ", playlist_name)
-        scrape_playlist(
-            username, playlist_name, driver, years=years, skip_if_fresher_than=seconds_in_day
-        )
+    for username in get_usernames():
+        print(f"\n\nSCRAPING USER: {username}")
+        for playlist_name in get_playlist_names(username):
+            print()
+            print("scraping: ", playlist_name)
+            scrape_playlist(
+                username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
+            )
+        
+        # also add information, which videos have been watched
+        id_to_watched_times = get_youtube_watched_ids(username)
+        # note: it looks that in watched videos, there are only stored watches from the last 5 years
+
+        if save_watched_data_to_db:
+            # add data about the time they were watched
+            print("saving watched videos")
+            with driver.session() as s:
+                s.write_transaction(ensure_user_exists, username)
+                for video_id, watched_times in id_to_watched_times.items():
+                    s.write_transaction(add_watched_times, username, video_id, watched_times)
 
 
-def scrape_watched():
-    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
+# def scrape_watched(username="default"):
+#     driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 
-    id_to_watched_times = get_youtube_watched_ids()
-    # note: it looks that in watched videos, there are only stored watches from the last 5 years
+#     id_to_watched_times = get_youtube_watched_ids(username)
+#     # note: it looks that in watched videos, there are only stored watches from the last 5 years
 
-    ids_to_add = list(id_to_watched_times.keys())
-    with Scraper(driver=driver, G=None) as scraper:
-        scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=seconds_in_month)
+#     ids_to_add = list(id_to_watched_times.keys())
+#     with Scraper(driver=driver, G=None) as scraper:
+#         scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=seconds_in_month)
 
-    # add data about the time they were added
-    # assumes that the videos already exist in the DB (they were added in the previous step)
-    # todo? this should be mandatory, even if we aren't scraping all the watched
-    with driver.session() as s:
-        for video_id, watched_times in id_to_watched_times.items():
-            s.write_transaction(add_watched_times, video_id, watched_times)
+#     # add data about the time they were added
+#     # assumes that the videos already exist in the DB (they were added in the previous step)
+#     # todo? this should be mandatory, even if we aren't scraping all the watched
+#     with driver.session() as s:
+#         for video_id, watched_times in id_to_watched_times.items():
+#             s.write_transaction(add_watched_times, video_id, watched_times)
 
 
-def scrape_transcripts_from_watched_videos():
+def scrape_transcripts_from_watched_videos(username="default"):
     # note that already scraped videos won't be skipped
     # as is the case with other scraping functions
     # also no saving db in case of some failure
-    id_to_watched_times = get_youtube_watched_ids()
+    id_to_watched_times = get_youtube_watched_ids(username)
     # note: it looks that in watched videos, there are only stored watches from the last 5 years
     ids = id_to_watched_times.keys()
 

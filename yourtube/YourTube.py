@@ -1,5 +1,6 @@
 import functools
 import logging
+from os import access
 import random
 from time import time
 
@@ -9,7 +10,7 @@ import panel as pn
 import param
 from neo4j import GraphDatabase
 
-from yourtube.file_operations import load_graph_from_neo4j
+from yourtube.file_operations import load_graph_from_neo4j, user_takeout_exists, update_user_takeout
 from yourtube.html_components import (
     MaterialButton,
     MaterialSwitch,
@@ -231,6 +232,7 @@ class UI:
 
 #######################################################################################
 
+
 class Parameters(param.Parameterized):
     seed = param.Integer()
     clustering_balance_a = param.Number(1.7, bounds=(1, 2.5), step=0.1)
@@ -243,7 +245,7 @@ class Parameters(param.Parameterized):
 
 
 parameters = Parameters(seed=random.randint(1, 1000000))
-takeout_file_input = pn.widgets.FileInput()
+takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
 
 driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
 
@@ -260,11 +262,49 @@ def refresh(_event):
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    
+    if (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is None):
+        template.main[0][0] = pn.pane.Markdown(
+            """
+        #### Username doesn't exist
+        To create a new user, type your username and upload your youtube takeout.
+        """
+        )
+        return
+    elif (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is not None):
+        logger.info("creating new user")
+        template.main[0][0] = pn.pane.Markdown("Creating a new user...")
+        takeout_ok = update_user_takeout(parameters.username, takeout_file_input)
+        if takeout_ok:
+            logger.info(f"created new user: {parameters.username}")
+            template.main[0][0] = pn.pane.Markdown(
+                """
+            #### Created new user successfully!
+            You should be able to use the app tomorrow, after your videos get scraped.\n
+            Thanks for your patience!
+            """
+            )
+        else:
+            logger.error(f"failed to create a new user: {parameters.username}")
+            template.main[0][0] = pn.pane.Markdown(
+                """
+            #### Failed to create a new user
+            The file you uploaded doesn't seem to be a valid youtube takeout.
+            """
+            )
+        return
 
     start_time = time()
     G = load_graph_from_neo4j(driver, user=parameters.username)
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
+    if len(G.nodes) == 0:
+        logger.error(f"user: {parameters.username}, tried to load an empty graph")
+        template.main[0][0] = pn.pane.Markdown(
+            """
+        #### There's nothing to show to you :(
+        Either we didn't scrape your videos yet, or your yourtube takeout was empty.
+        """
+        )
+        return
 
     engine = Engine(G, driver, parameters)
     ui = UI(engine, parameters)
