@@ -206,6 +206,7 @@ class Engine:
         self.driver = driver
         self.user = parameters.username
         self.display_callback = lambda: None
+        self.message_callback = lambda msg: None
 
         self.num_of_groups = parameters.num_of_groups
         self.videos_in_group = parameters.videos_in_group
@@ -258,32 +259,42 @@ class Engine:
         return self.G.nodes[video_id].get("title", "")
 
     def save_current_cluster(self, cluster_name):
-        tree = self.tree_climber.tree
-        node_ranks = self.recommender.node_ranks
-        path = saved_clusters_template.format(self.user, cluster_name)
+        # sanitize cluster name
+        cluster_name = cluster_name.replace("/", "-")
 
+        path = saved_clusters_template.format(self.user, cluster_name)
         # make sure user directory exists
         Path(path).parent.mkdir(parents=True, exist_ok=True)
 
+        data_to_save = (
+            self.tree_climber.tree,
+            self.recommender.node_ranks,
+            self.G,
+        )
+
         # save cluster
         with open(path, "wb") as handle:
-            pickle.dump((tree, node_ranks), handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(data_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_saved_clusters(self):
-        pattern = saved_clusters_template.format(self.user, "*")
-        cluster_names = []
-        for abs_filename in glob.glob(pattern):
-            filename = os.path.split(abs_filename)[1]
-            cluster_name = filename.split(".")[0]
-            cluster_names.append(cluster_name)
-        return cluster_names
+        self.message_callback("cluster saved successfully")
 
     def load_cluster(self, cluster_name):
-        path = saved_clusters_template.format(self.user, cluster_name)
+        # allow loading other users' cluster of the format: username/cluster_name
+        # keep possible to load this user cluster of the format: cluster_name
+        cluster_name_parts = cluster_name.split("/")
+        cluster_name = cluster_name_parts[-1]
+        if len(cluster_name_parts) == 2:
+            username = cluster_name_parts[0]
+            # we also need to load a new graph!
+        else:
+            username = self.user
+
+        path = saved_clusters_template.format(username, cluster_name)
         with open(path, "rb") as handle:
-            tree, node_ranks = pickle.load(handle)
+            tree, node_ranks, graph = pickle.load(handle)
         self.tree_climber.reset(tree)
         self.recommender.node_ranks = node_ranks
+        self.G = graph
         self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):

@@ -13,6 +13,7 @@ from yourtube.file_operations import (
     user_takeout_exists,
     update_user_takeout,
     load_joined_graph_of_many_users,
+    get_saved_clusters,
 )
 from yourtube.html_components import (
     MaterialButton,
@@ -50,8 +51,6 @@ pn.extension(
 
 
 class UI:
-    info_template = '<div id="message_output" style="width:400px;">{}</div>'
-
     def __init__(
         self,
         engine,
@@ -100,7 +99,7 @@ class UI:
         save_cluster_button.on_click = self.save_current_cluster
 
         self.saved_cluster_selector = pn.widgets.Select(
-            name="Saved clusters", options=self.engine.get_saved_clusters()
+            name="Saved clusters", options=get_saved_clusters(parameters.username)
         )
         load_cluster_button = MaterialButton(
             label="Load cluster",
@@ -205,20 +204,20 @@ class UI:
 
     def choose_column(self, _change, i):
         exit_code = self.engine.choose_column(i)
-        self.message_output.object = self.info_template.format(self.engine.get_branch_id())
+        self.show_message(self.engine.get_branch_id())
 
         if exit_code == -1:
-            self.message_output.object = self.info_template.format("already on the lowest cluster")
+            self.show_message("already on the lowest cluster")
             return
 
         self.update_displayed_videos()
 
     def go_back(self, _event):
         exit_code = self.engine.go_back()
-        self.message_output.object = self.info_template.format(self.engine.get_branch_id())
+        self.show_message(self.engine.get_branch_id())
 
         if exit_code == -1:
-            self.message_output.object = self.info_template.format("already on the highest cluster")
+            self.show_message("already on the highest cluster")
             return
 
         self.update_displayed_videos()
@@ -232,6 +231,10 @@ class UI:
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
         self.display_video_grid()
         self.engine.fetch_videos(self.get_recommendation_parameters())
+
+    def show_message(self, message):
+        info_template = '<div id="message_output" style="width:400px;">{}</div>'
+        self.message_output.object = info_template.format(message)
 
 
 #######################################################################################
@@ -274,6 +277,10 @@ def refresh(_event):
             template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
             return
         elif (not user_takeout_exists(username)) and (takeout_file_input.value is not None):
+            if "/" in username:
+                logger.info(f"bad username: {username}")
+                template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
+                return
             logger.info("creating new user")
             takeout_ok = update_user_takeout(username, takeout_file_input)
             if takeout_ok:
@@ -286,6 +293,7 @@ def refresh(_event):
         elif user_takeout_exists(username) and (takeout_file_input.value is not None):
             logger.info(f"someone tried to create a new user with existing username: {username}")
             template.main[0][0] = pn.pane.Markdown(Msgs.user_already_exists)
+            return
     else:
         # multiple users!
         for username in usernames:
@@ -310,6 +318,7 @@ def refresh(_event):
     engine = Engine(G, driver, parameters)
     ui = UI(engine, parameters)
     engine.display_callback = ui.display_video_grid
+    engine.message_callback = ui.show_message
 
     template.main[0][0] = ui.whole_output
 

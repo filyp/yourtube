@@ -22,6 +22,11 @@ You can install it on your computer following the [insructions below](https://gi
 4. Click refresh button below
 5. You will be able to use the system the next day.
 
+## Saving clusters
+
+You can save some cluster of videos for later using controls on the top. Note that on default your clusters will be publicly visible, along with your username. If you want to create a private cluster, start its name with `_`, for example `_music`.
+
+You can also browse clusters that the other users saved.
 
 # FAQ
 

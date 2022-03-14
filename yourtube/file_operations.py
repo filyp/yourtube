@@ -243,3 +243,28 @@ def update_user_takeout(username, takeout_file_input):
     playlist_exist = os.path.exists(playlists_path_template.format(username))
     history_exists = os.path.exists(history_path_template.format(username))
     return playlist_exist and history_exists
+
+
+def get_saved_clusters(username):
+    pattern = saved_clusters_template.format(username, "*")
+    cluster_names = []
+    for abs_filename in glob.glob(pattern):
+        filename = os.path.split(abs_filename)[1]
+        cluster_name = filename.split(".")[0]
+        cluster_names.append(cluster_name)
+
+    # get public clusters of other users
+    # if a cluster name starts with _, it is private, so avoid it
+    pattern = saved_clusters_template.format("*", "[!_]*")
+    for abs_filename in glob.glob(pattern):
+        head, filename = os.path.split(abs_filename)
+        current_username = os.path.split(head)[1]
+        if current_username == username:
+            # this user's cluster were already added previously
+            continue
+
+        cluster_name = filename.split(".")[0]
+        cluster_name = current_username + "/" + cluster_name
+        cluster_names.append(cluster_name)
+
+    return cluster_names

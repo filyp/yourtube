@@ -22,7 +22,7 @@ class Config:
 @dataclass
 class Msgs:
     user_doesnt_exist = """
-        #### Username "{}" doesn't exist
+        #### Username "{}" doesn't exist.
         To create a new user, type your username and upload your youtube takeout.
     """
     user_created = """
@@ -31,7 +31,7 @@ class Msgs:
         Thanks for your patience!
     """
     user_creation_failed = """
-        #### Failed to create a new user
+        #### Failed to create a new user.
         The file you uploaded doesn't seem to be a valid youtube takeout.
     """
     trying_to_load_empty_graph = """
@@ -39,6 +39,9 @@ class Msgs:
         Either we didn't scrape your videos yet, or your yourtube takeout was empty.
     """
     user_already_exists = """
-        #### There already exists a user with this name
+        #### There already exists a user with this name.
         Try a different username.
+    """
+    bad_username = """
+        #### Username cannot contain /
     """
