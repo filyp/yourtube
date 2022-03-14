@@ -272,15 +272,15 @@ def refresh(_event):
 
     usernames = parameters.username.split("+")
     if len(usernames) == 1:
+        if "/" in username:
+            logger.info(f"bad username: {username}")
+            template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
+            return
         username = usernames[0]
         if (not user_takeout_exists(username)) and (takeout_file_input.value is None):
             template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
             return
         elif (not user_takeout_exists(username)) and (takeout_file_input.value is not None):
-            if "/" in username:
-                logger.info(f"bad username: {username}")
-                template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
-                return
             logger.info("creating new user")
             takeout_ok = update_user_takeout(username, takeout_file_input)
             if takeout_ok:
@@ -297,6 +297,10 @@ def refresh(_event):
     else:
         # multiple users!
         for username in usernames:
+            if "/" in username:
+                logger.info(f"bad username: {username}")
+                template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
+                return
             if not user_takeout_exists(username):
                 template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
                 return
