@@ -64,7 +64,12 @@ Now export your data from youtube with these steps (sadly this cannot be automat
 8. Click "Next step"
 9. Select your preferred method of delivery (Email, Dropbox, etc.) and click on "Create Export"
 10. Download the .zip file
-11. Extract it into `~/.yourtube/data`, so that you have the structure: `~/.yourtube/data/Takeout/...`
+
+Now run:
+```bash
+docker-compose -f ~/.yourtube/yourtube.yml up -d
+```
+and insert your takeout file with the file chooser on the left.
 
 Now run:
 ```bash

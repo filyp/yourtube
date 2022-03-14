@@ -297,6 +297,7 @@ def refresh(_event):
     start_time = time()
     G = load_graph_from_neo4j(driver, user=parameters.username)
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
+    logger.info(f"user: {parameters.username}")
     if len(G.nodes) == 0:
         logger.error(f"user: {parameters.username}, tried to load an empty graph")
         template.main[0][0] = pn.pane.Markdown(
