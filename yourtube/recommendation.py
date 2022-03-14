@@ -261,6 +261,9 @@ class Engine:
     def save_current_cluster(self, cluster_name):
         # sanitize cluster name
         cluster_name = cluster_name.replace("/", "-")
+        if cluster_name == "":
+            self.message_callback("you must enter some name for this cluster, before saving it")
+            return
 
         path = saved_clusters_template.format(self.user, cluster_name)
         # make sure user directory exists

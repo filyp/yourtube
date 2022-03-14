@@ -257,7 +257,7 @@ def get_saved_clusters(username):
     # if a cluster name starts with _, it is private, so avoid it
     pattern = saved_clusters_template.format("*", "[!_]*")
     for abs_filename in glob.glob(pattern):
-        head, filename = os.path.split(abs_filename)
+        head, cluster_name = os.path.split(abs_filename)
         current_username = os.path.split(head)[1]
         if current_username == username:
             # this user's cluster were already added previously
