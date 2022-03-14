@@ -27,7 +27,7 @@ id_to_url = "https://www.youtube.com/watch?v={}"
 data_path = os.path.join(os.sep, "yourtube", "data")
 graph_path_template = os.path.join(data_path, "graph_cache", "{}.pickle")
 clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pickle")
-saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}.pickle")
+saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
 transcripts_path = os.path.join(data_path, "transcripts.json")
 
 takeouts_template = os.path.join(data_path, "takeouts", "{}")
@@ -263,7 +263,6 @@ def get_saved_clusters(username):
             # this user's cluster were already added previously
             continue
 
-        cluster_name = filename.split(".")[0]
         cluster_name = current_username + "/" + cluster_name
         cluster_names.append(cluster_name)
 

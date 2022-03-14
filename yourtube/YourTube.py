@@ -90,7 +90,7 @@ class UI:
 
         self.cluster_to_save_name_field = MaterialTextField(
             label="Cluster name",
-            value="Enter cluster name...",
+            value="",
         )
         save_cluster_button = MaterialButton(
             label="Save cluster",
