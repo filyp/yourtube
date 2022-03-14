@@ -245,7 +245,7 @@ class Parameters(param.Parameterized):
     username = param.String(default="default")
 
 
-parameters = Parameters(seed=random.randint(1, 10000))
+parameters = Parameters(seed=random.randint(1, 9999))
 takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
 
 driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
@@ -286,6 +286,10 @@ def refresh(_event):
         logger.error(f"user: {parameters.username}, tried to load an empty graph")
         template.main[0][0] = pn.pane.Markdown(Msgs.trying_to_load_empty_graph)
         return
+
+    # ensure correct param values
+    if parameters.seed < 1 or parameters.seed > 9999:
+        parameters = Parameters(seed=random.randint(1, 9999))
 
     engine = Engine(G, driver, parameters)
     ui = UI(engine, parameters)

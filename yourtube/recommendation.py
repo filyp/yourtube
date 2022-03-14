@@ -93,7 +93,7 @@ class Recommender:
     def __init__(self, G, seed):
         self.G = G
         self.seed = seed
-        assert 1 <= seed <= 10000
+        assert 1 <= seed <= 9999
 
     def compute_node_ranks(self, ids):
         """This function must be called on given ids before we can use recommender on those ids."""

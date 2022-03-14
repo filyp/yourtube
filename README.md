@@ -15,7 +15,12 @@ Better youtube recommendations
 - [ ] Recommendations for two or more people
 - [ ] Sharing and browsing information bubbles
 
-You can play with the demo [here](http://yourtube.quest). It's meant only to show what it can do. To have personalized recommendations, you have to install it.
+You can install it on your computer following the [insructions below](https://github.com/filyp/yourtube#local-installation), or just use it [online](http://yourtube.quest). You can try it out as the `default` user, but to have personalized recommendations you will need to follow these steps:
+1. Export your data from youtube ([instructions here](https://github.com/filyp/yourtube#export-your-youtube-data))
+2. Choose your username, in the panel on the left. Note that anyone who knows your username can use your account, so if you don't want that, choose a hard to guess one.
+3. Upload the zip file with your youtube takeout, with the `Choose File` button.
+4. You will be able to use the system the next day.
+
 
 # FAQ
 
@@ -45,7 +50,7 @@ You can play with the demo [here](http://yourtube.quest). It's meant only to sho
 - For these reasons, it's better to start with an existing recomender system as a "bottom layer", and then build any new features we want, on top of it. 
 </details>
 
-# Installation
+# Local installation
 
 ```bash
 mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/master/docker-compose-release.yml > ~/.yourtube/yourtube.yml ; docker-compose -f ~/.yourtube/yourtube.yml run yourtube poetry run yourtube-install
@@ -53,7 +58,7 @@ mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/
 
 ## Export YouTube data and scrape it
 
-Now export your data from youtube with these steps (sadly this cannot be automated):
+### Export your youtube data
 1. Login to your YouTube account
 2. Click on your profile picture in the top right corner of the web page
 3. Make sure your preferred language is English
@@ -65,12 +70,14 @@ Now export your data from youtube with these steps (sadly this cannot be automat
 9. Select your preferred method of delivery (Email, Dropbox, etc.) and click on "Create Export"
 10. Download the .zip file
 
+### Load your takeout file into yourtube
 Now run:
 ```bash
 docker-compose -f ~/.yourtube/yourtube.yml up -d
 ```
 and insert your takeout file with the file chooser on the left.
 
+### Scrape videos
 Now run:
 ```bash
 docker-compose -f ~/.yourtube/yourtube.yml run yourtube poetry run yourtube-scrape

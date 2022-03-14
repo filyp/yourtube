@@ -270,7 +270,7 @@ class Scraper:
         ids_to_scrape = self.choose_which_video_to_skip(ids, skip_if_fresher_than)
 
         if not non_verbose:
-            print(f"skipped {len(ids) - len(ids_to_scrape)} videos")
+            print(f"skipped {len(ids) - len(ids_to_scrape)} videos, to scrape {len(ids_to_scrape)}")
 
         futures = set()
         for id_ in ids_to_scrape:
@@ -381,6 +381,7 @@ def scrape_all_playlists(
                 s.write_transaction(ensure_user_exists, username)
                 for video_id, watched_times in id_to_watched_times.items():
                     s.write_transaction(add_watched_times, username, video_id, watched_times)
+    print(f"\n\nSCRAPING FINISHED")
 
 
 # def scrape_watched(username="default"):
