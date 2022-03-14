@@ -114,6 +114,25 @@ def load_graph_from_neo4j(driver, user):
     return G
 
 
+def load_joined_graph_of_many_users(driver, users):
+    # load graphs of each user
+    graphs = []
+    for user in users:
+        G = load_graph_from_neo4j(driver, user=user)
+        graphs.append(G)
+
+    # join them
+    joined_graph = graphs[0]
+    for G in graphs[1:]:
+        # joined_graph.add_nodes_from(G.nodes(data=True))
+        # joined_graph.add_edges_from(G.edges())
+        if len(G.nodes) == 0:
+            logger.error(f"user: {user}, tried to load an empty graph in multi-user mode")
+        joined_graph.update(G)
+
+    return joined_graph
+
+
 def get_transcripts_db():
     return pickledb.load(transcripts_path, auto_dump=False)
 

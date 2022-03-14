@@ -1,6 +1,5 @@
 import functools
 import logging
-from os import access
 import random
 from time import time
 
@@ -10,7 +9,11 @@ import panel as pn
 import param
 from neo4j import GraphDatabase
 
-from yourtube.file_operations import load_graph_from_neo4j, user_takeout_exists, update_user_takeout
+from yourtube.file_operations import (
+    user_takeout_exists,
+    update_user_takeout,
+    load_joined_graph_of_many_users,
+)
 from yourtube.html_components import (
     MaterialButton,
     MaterialSwitch,
@@ -260,27 +263,39 @@ def refresh(_event):
     # it looks that it needs to be global, so that ui gets dereferenced, and can disappear
     # otherwise it is still bound to the new panel buttons, probably due to some panel quirk
     # and this causes each click to be executed double
-    global ui, engine, G, takeout_file_input, parameters
+    global ui, engine, G, takeout_file_input
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    if (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is None):
-        template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist)
-        return
-    elif (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is not None):
-        logger.info("creating new user")
-        template.main[0][0] = pn.pane.Markdown("Creating a new user...")
-        takeout_ok = update_user_takeout(parameters.username, takeout_file_input)
-        if takeout_ok:
-            logger.info(f"created new user: {parameters.username}")
-            template.main[0][0] = pn.pane.Markdown(Msgs.user_created)
-        else:
-            logger.error(f"failed to create a new user: {parameters.username}")
-            template.main[0][0] = pn.pane.Markdown(Msgs.user_creation_failed)
-        return
+    usernames = parameters.username.split("+")
+    if len(usernames) == 1:
+        username = usernames[0]
+        if (not user_takeout_exists(username)) and (takeout_file_input.value is None):
+            template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
+            return
+        elif (not user_takeout_exists(username)) and (takeout_file_input.value is not None):
+            logger.info("creating new user")
+            takeout_ok = update_user_takeout(username, takeout_file_input)
+            if takeout_ok:
+                logger.info(f"created new user: {username}")
+                template.main[0][0] = pn.pane.Markdown(Msgs.user_created)
+            else:
+                logger.error(f"failed to create a new user: {username}")
+                template.main[0][0] = pn.pane.Markdown(Msgs.user_creation_failed)
+            return
+        elif user_takeout_exists(username) and (takeout_file_input.value is not None):
+            logger.info(f"someone tried to create a new user with existing username: {username}")
+            template.main[0][0] = pn.pane.Markdown(Msgs.user_already_exists)
+    else:
+        # multiple users!
+        for username in usernames:
+            if not user_takeout_exists(username):
+                template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
+                return
 
     start_time = time()
-    G = load_graph_from_neo4j(driver, user=parameters.username)
+    # G = load_graph_from_neo4j(driver, user=parameters.username)
+    G = load_joined_graph_of_many_users(driver, usernames)
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
     logger.info(f"user: {parameters.username}, graph size: {len(G.nodes)}")
     if len(G.nodes) == 0:
@@ -290,7 +305,7 @@ def refresh(_event):
 
     # ensure correct param values
     if parameters.seed < 1 or parameters.seed > 9999:
-        parameters = Parameters(seed=random.randint(1, 9999))
+        parameters.seed = random.randint(1, 9999)
 
     engine = Engine(G, driver, parameters)
     ui = UI(engine, parameters)
