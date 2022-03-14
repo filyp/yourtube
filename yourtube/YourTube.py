@@ -19,7 +19,7 @@ from yourtube.html_components import (
     required_modules,
 )
 from yourtube.recommendation import Engine
-from yourtube.config import Config
+from yourtube.config import Config, Msgs
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -264,12 +264,7 @@ def refresh(_event):
     template.main[0][0] = pn.Spacer()
 
     if (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is None):
-        template.main[0][0] = pn.pane.Markdown(
-            """
-        #### Username doesn't exist
-        To create a new user, type your username and upload your youtube takeout.
-        """
-        )
+        template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist)
         return
     elif (not user_takeout_exists(parameters.username)) and (takeout_file_input.value is not None):
         logger.info("creating new user")
@@ -277,35 +272,19 @@ def refresh(_event):
         takeout_ok = update_user_takeout(parameters.username, takeout_file_input)
         if takeout_ok:
             logger.info(f"created new user: {parameters.username}")
-            template.main[0][0] = pn.pane.Markdown(
-                """
-            #### Created new user successfully!
-            You should be able to use the app tomorrow, after your videos get scraped.\n
-            Thanks for your patience!
-            """
-            )
+            template.main[0][0] = pn.pane.Markdown(Msgs.user_created)
         else:
             logger.error(f"failed to create a new user: {parameters.username}")
-            template.main[0][0] = pn.pane.Markdown(
-                """
-            #### Failed to create a new user
-            The file you uploaded doesn't seem to be a valid youtube takeout.
-            """
-            )
+            template.main[0][0] = pn.pane.Markdown(Msgs.user_creation_failed)
         return
 
     start_time = time()
     G = load_graph_from_neo4j(driver, user=parameters.username)
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
-    logger.info(f"user: {parameters.username}")
+    logger.info(f"user: {parameters.username}, graph size: {len(G.nodes)}")
     if len(G.nodes) == 0:
         logger.error(f"user: {parameters.username}, tried to load an empty graph")
-        template.main[0][0] = pn.pane.Markdown(
-            """
-        #### There's nothing to show to you :(
-        Either we didn't scrape your videos yet, or your yourtube takeout was empty.
-        """
-        )
+        template.main[0][0] = pn.pane.Markdown(Msgs.trying_to_load_empty_graph)
         return
 
     engine = Engine(G, driver, parameters)

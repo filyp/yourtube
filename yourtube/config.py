@@ -17,3 +17,24 @@ class Config:
 
     # password to the neo4j database
     neo4j_password = "yourtube"
+
+
+@dataclass
+class Msgs:
+    user_doesnt_exist = """
+        #### Username doesn't exist
+        To create a new user, type your username and upload your youtube takeout.
+    """
+    user_created = """
+        #### Created new user successfully!
+        You should be able to use the app tomorrow, after your videos get scraped.\n
+        Thanks for your patience!
+    """
+    user_creation_failed = """
+        #### Failed to create a new user
+        The file you uploaded doesn't seem to be a valid youtube takeout.
+    """
+    trying_to_load_empty_graph = """
+        #### There's nothing to show to you :(
+        Either we didn't scrape your videos yet, or your yourtube takeout was empty.
+    """
