@@ -272,11 +272,11 @@ def refresh(_event):
 
     usernames = parameters.username.split("+")
     if len(usernames) == 1:
+        username = usernames[0]
         if "/" in username:
             logger.info(f"bad username: {username}")
             template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
             return
-        username = usernames[0]
         if (not user_takeout_exists(username)) and (takeout_file_input.value is None):
             template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
             return
