@@ -247,6 +247,7 @@ class Parameters(param.Parameterized):
 
 parameters = Parameters(seed=random.randint(1, 9999))
 takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
+# pn.state.location.sync(parameters, ["username"])
 
 driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
@@ -259,7 +260,7 @@ def refresh(_event):
     # it looks that it needs to be global, so that ui gets dereferenced, and can disappear
     # otherwise it is still bound to the new panel buttons, probably due to some panel quirk
     # and this causes each click to be executed double
-    global ui, engine, G, takeout_file_input
+    global ui, engine, G, takeout_file_input, parameters
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
