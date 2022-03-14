@@ -247,6 +247,7 @@ class Parameters(param.Parameterized):
 
 parameters = Parameters(seed=random.randint(1, 9999))
 takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
+pn.state.location.sync(parameters, ["username"])
 
 driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
