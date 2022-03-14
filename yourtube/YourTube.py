@@ -19,6 +19,7 @@ from yourtube.html_components import (
     required_modules,
 )
 from yourtube.recommendation import Engine
+from yourtube.config import Config
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -244,10 +245,10 @@ class Parameters(param.Parameterized):
     username = param.String(default="default")
 
 
-parameters = Parameters(seed=random.randint(1, 1000000))
+parameters = Parameters(seed=random.randint(1, 10000))
 takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
 
-driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
+driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)

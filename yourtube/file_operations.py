@@ -17,6 +17,7 @@ from yourtube.neo4j_queries import (
     get_all_user_relevant_playlist_info,
     get_limited_user_relevant_video_info,
 )
+from yourtube.config import Config
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -43,8 +44,7 @@ def load_graph_from_neo4j(driver, user):
     graph_path = graph_path_template.format(user)
     if os.path.isfile(graph_path):
         time_modified = os.path.getmtime(graph_path)
-        seconds_in_a_day = 60 * 60 * 24
-        if time() - time_modified < seconds_in_a_day * 3:
+        if time() - time_modified < Config.graph_cache_time:
             logger.info("using cached graph")
             with open(graph_path, "rb") as handle:
                 return pickle.load(handle)
@@ -89,8 +89,8 @@ def load_graph_from_neo4j(driver, user):
         params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
 
         # check if they were watched
-        params_dict_v1["watched"] = (v1_video_id in id_to_watched_times)
-        params_dict_v2["watched"] = (v2_video_id in id_to_watched_times)
+        params_dict_v1["watched"] = v1_video_id in id_to_watched_times
+        params_dict_v2["watched"] = v2_video_id in id_to_watched_times
 
         G.add_node(v1_video_id, **params_dict_v1)
         G.add_node(v2_video_id, **params_dict_v2)

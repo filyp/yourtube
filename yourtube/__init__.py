@@ -12,6 +12,7 @@ from yourtube.file_operations import (
     saved_clusters_template,
     takeouts_template,
 )
+from yourtube.config import Config
 
 __version__ = "0.7.0"
 
@@ -37,7 +38,7 @@ def install():
     Path(takeouts_template).parent.mkdir(parents=True, exist_ok=True)
 
     print("\n\nSetting up database...")
-    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
+    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
     # this creates neeeded constraints (which by the way sets up indexes)
     with driver.session() as s:
         s.write_transaction(create_video_id_constraint)

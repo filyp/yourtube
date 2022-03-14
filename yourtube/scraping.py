@@ -27,10 +27,7 @@ from yourtube.file_operations import (
     get_usernames,
 )
 from yourtube.neo4j_queries import *
-
-seconds_in_day = 60 * 60 * 24
-seconds_in_week = 60 * 60 * 24 * 7
-seconds_in_month = seconds_in_day * 30.4
+from yourtube.config import Config
 
 
 def get_content(id_):
@@ -332,7 +329,9 @@ def scrape_playlist(
     username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
 ):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name, username)
-    ids_to_add, times_added = only_added_in_last_n_years(ids_to_add, times_added, n=scrape_from_last_n_years)
+    ids_to_add, times_added = only_added_in_last_n_years(
+        ids_to_add, times_added, n=scrape_from_last_n_years
+    )
 
     with Scraper(driver=driver, G=None) as scraper:
         scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=skip_if_fresher_than)
@@ -351,8 +350,15 @@ def scrape_playlist(
 # exposed functions:
 
 
-def scrape_all_playlists(scrape_from_last_n_years=3, skip_if_fresher_than=seconds_in_week, save_watched_data_to_db=False):
-    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
+def scrape_all_playlists(
+    scrape_from_last_n_years=None, skip_if_fresher_than=None, save_watched_data_to_db=False
+):
+    if scrape_from_last_n_years is None:
+        scrape_from_last_n_years = Config.scrape_playlist_items_from_last_n_years
+    if skip_if_fresher_than is None:
+        skip_if_fresher_than = Config.periodic_scraping_skip_if_fresher_than
+
+    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
     for username in get_usernames():
         print(f"\n\nSCRAPING USER: {username}")
@@ -362,13 +368,14 @@ def scrape_all_playlists(scrape_from_last_n_years=3, skip_if_fresher_than=second
             scrape_playlist(
                 username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
             )
-        
-        # also add information, which videos have been watched
-        id_to_watched_times = get_youtube_watched_ids(username)
-        # note: it looks that in watched videos, there are only stored watches from the last 5 years
 
         if save_watched_data_to_db:
+            # also add information, which videos have been watched
+            id_to_watched_times = get_youtube_watched_ids(username)
+            # note: it looks that in watched videos, there are only stored watches from the last 5 years
+
             # add data about the time they were watched
+            # this is not needed now, because we read this data directly from takeout
             print("saving watched videos")
             with driver.session() as s:
                 s.write_transaction(ensure_user_exists, username)
@@ -377,7 +384,7 @@ def scrape_all_playlists(scrape_from_last_n_years=3, skip_if_fresher_than=second
 
 
 # def scrape_watched(username="default"):
-#     driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", "yourtube"))
+#     driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
 #     id_to_watched_times = get_youtube_watched_ids(username)
 #     # note: it looks that in watched videos, there are only stored watches from the last 5 years
