@@ -298,6 +298,7 @@ class Engine:
         self.tree_climber.reset(tree)
         self.recommender.node_ranks = node_ranks
         self.G = graph
+        self.scraper.G = graph
         self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):
