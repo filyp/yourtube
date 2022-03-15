@@ -1,7 +1,6 @@
 # YourTube
 
 ![build](https://github.com/filyp/YourTube/actions/workflows/build.yml/badge.svg)
-[![Downloads](https://pepy.tech/badge/yourtube)](https://pepy.tech/project/yourtube)
 [![CodeFactor](https://www.codefactor.io/repository/github/filyp/yourtube/badge)](https://www.codefactor.io/repository/github/filyp/yourtube)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -12,7 +11,7 @@ Better youtube recommendations
 - [x] Very customizable
 - [x] Recommendations for two or more people
 - [x] You can install it locally for completely private recommendations
-- [ ] Sharing and browsing information bubbles
+- [x] Sharing and browsing information bubbles
 - [ ] Less clickbait
 
 You can install it on your computer following the [insructions below](https://github.com/filyp/yourtube#local-installation), or just use it [online](http://yourtube.quest). You can try it out as the `default` user, but to have personalized recommendations you will need to follow these steps:
