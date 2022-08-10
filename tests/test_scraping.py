@@ -55,31 +55,13 @@ def test_scraping_length():
 
 
 def test_scraping_keywords():
-    assert G.nodes[id_]["keywords"] == [
+    assert set(G.nodes[id_]["keywords"]).issuperset([
         "rick astley",
         "Never Gonna Give You Up",
         "nggyu",
         "never gonna give you up lyrics",
         "rick rolled",
-        "the boys soundtrack",
-        "the boys amazon prime",
-        "Never gonna give you up the boys",
-        "official",
-        "Rick Roll",
-        "music video",
-        "Rick Astley album",
-        "rick astley official",
-        "together forever",
-        "Whenever You Need Somebody",
-        "rickrolled",
-        "WRECK-IT RALPH 2",
-        "Fortnite song",
-        "Fortnite event",
-        "Fortnite dance",
-        "fortnite never gonna give you up",
-        "rick astley never gonna give you up",
-        "rick astley never gonna give you up lyrics",
-    ]
+    ])
 
 
 def test_title_special_chars():
