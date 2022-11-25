@@ -14,7 +14,7 @@ Better youtube recommendations
 - [x] Sharing and browsing information bubbles
 - [ ] Less clickbait
 
-You can install it on your computer following the [insructions below](https://github.com/filyp/yourtube#local-installation), or just use it [online](http://yourtube.quest). You can try it out as the `default` user, but to have personalized recommendations you will need to follow these steps:
+You can install it on your computer following the [instructions below](https://github.com/filyp/yourtube#local-installation), or just use it [online](http://yourtube.quest). You can try it out as the `default` user, but to have personalized recommendations you will need to follow these steps:
 1. Export your data from youtube ([instructions here](https://github.com/filyp/yourtube#export-your-youtube-data))
 2. Choose your username, in the panel on the left. Note that anyone who knows your username can use your account, so if you don't want that, choose a hard to guess one.
 3. Upload the zip file with your youtube takeout, with the `Choose File` button.
