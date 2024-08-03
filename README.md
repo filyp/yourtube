@@ -76,11 +76,11 @@ mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/
 10. Download the .zip file
 
 ### Load your takeout file into yourtube
-Now run:
+Run:
 ```bash
 docker-compose -f ~/.yourtube/yourtube.yml up -d
 ```
-and insert your takeout file with the file chooser on the left.
+Open `http://localhost:8866/` and insert your takeout file with the file chooser on the left.
 
 ### Scrape videos
 Now run:
