@@ -21,6 +21,7 @@ sklearn = "^0.0"
 panel = "^0.12.1"
 neo4j = "^4.4.1"
 krakow = "^0.2.0"
+pyyaml = "^6.0.1"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.13.0"
