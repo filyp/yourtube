@@ -73,13 +73,16 @@ mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/
 8. Click "Next step"
 9. Select your preferred method of delivery (Email, Dropbox, etc.) and click on "Create Export"
 10. Download the .zip file
+11. Unzip the file
 
 ### Load your takeout file into yourtube
-Run:
 ```bash
-docker-compose -f ~/.yourtube/yourtube.yml up -d
+sudo chown -R $USER:$USER ~/.yourtube
+mkdir ~/.yourtube/data/takeouts/default
+mv __PATH_TO_YOUR_TAKEOUT__/Takeout .yourtube/data/takeouts/default
 ```
-Open `http://localhost:8866/` and insert your takeout file with the file chooser on the left.
+
+To add other users, do the same, but replace `default` with the username you want to use.
 
 ### Scrape videos
 Now run:
