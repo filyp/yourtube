@@ -175,7 +175,8 @@ def get_youtube_playlist_ids(playlist_name, username):
         reader = csv.reader(file, delimiter=",")
         data_read = [row for row in reader]
 
-    data_read = data_read[4:-1]  # strip metadata
+    # strip metadata
+    data_read = [row for row in data_read if len(row) == 2 and len(row[0]) == 11]
     if data_read:
         ids, timestamps = zip(*data_read)
     else:

@@ -7,6 +7,7 @@ from concurrent.futures import (
     as_completed,
 )
 from time import time
+import traceback
 
 import numpy as np
 import requests
@@ -53,7 +54,11 @@ def get_recommended_ids(content, id_):
 
 def get_title(content):
     text = content.text.replace("\n", " ")
-    candidates = re.findall(r"<title>(.*?) - YouTube</title>", text)
+    candidates = re.findall(
+        r'"videoPrimaryInfoRenderer":{"title":{"runs":\[{"text":"(.*?)"}',
+        text,
+    )
+
     assert len(candidates) == 1
     title = candidates[0]
 
@@ -65,14 +70,16 @@ def get_title(content):
 
 
 def get_view_count(content):
-    candidates = re.findall(r'"viewCount":"([0-9]+)"', content.text)
-    candidates = set(candidates)
-    assert 1 <= len(candidates) <= 2
-    if len(candidates) == 2:
-        # premium videos list 2 different video versions
-        return None
-    view_count = candidates.pop()
-    return int(view_count)
+    # it's not needed anymore, and causes problems when youtube changes the format
+    return None
+    # candidates = re.findall(r'"viewCount":"([0-9]+)"', content.text)
+    # candidates = set(candidates)
+    # assert 1 <= len(candidates) <= 2, candidates
+    # if len(candidates) == 2:
+    #     # premium videos list 2 different video versions
+    #     return None
+    # view_count = candidates.pop()
+    # return int(view_count)
 
 
 def get_like_count(content):
@@ -109,27 +116,31 @@ def get_channel_id(content):
 
 
 def get_category(content):
-    candidates = re.findall(r'"category":"(.*?)"', content.text)
-    candidates = set(candidates)
-    assert 1 <= len(candidates) <= 2
-    if len(candidates) == 2:
-        assert candidates == {"Trailers", "Movies"}
-        # youtube movies have these two categories, so just say it's a movie
-        return "Movies"
-    category = candidates.pop()
-    category = category.replace("\\u0026", "&")
-    return category
+    # it's not needed anymore, and causes problems when youtube changes the format
+    return ""
+    # candidates = re.findall(r'"category":"(.*?)"', content.text)
+    # candidates = set(candidates)
+    # assert 1 <= len(candidates) <= 2
+    # if len(candidates) == 2:
+    #     assert candidates == {"Trailers", "Movies"}
+    #     # youtube movies have these two categories, so just say it's a movie
+    #     return "Movies"
+    # category = candidates.pop()
+    # category = category.replace("\\u0026", "&")
+    # return category
 
 
 def get_length(content):
-    candidates = re.findall(r'"videoDetails":.*?"lengthSeconds":"(.*?)"', content.text)
-    candidates = set(candidates)
-    assert 1 <= len(candidates) <= 2
-    if len(candidates) == 2:
-        # premium videos list 2 different lengths
-        return None
-    length = candidates.pop()
-    return int(length)
+    # it's not needed anymore, and causes problems when youtube changes the format
+    return 0
+    # candidates = re.findall(r'"videoDetails":.*?"lengthSeconds":"(.*?)"', content.text)
+    # candidates = set(candidates)
+    # assert 1 <= len(candidates) <= 2
+    # if len(candidates) == 2:
+    #     # premium videos list 2 different lengths
+    #     return None
+    # length = candidates.pop()
+    # return int(length)
 
 
 def get_keywords(content):
@@ -175,6 +186,8 @@ def scrape_content(content, id_, G=None, driver=None):
         video_info["time_scraped"] = time()
     except Exception:
         print("\n\nscraping failed for video: ", id_)
+        # print everything about the error that we can
+        print(traceback.format_exc())
         raise
 
     if driver is not None:
