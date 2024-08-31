@@ -229,6 +229,11 @@ class UI:
         self.engine.load_cluster(self.saved_cluster_selector.value)
 
     def update_displayed_videos(self, _widget=None, _event=None, _data=None):
+        # display children sizes
+        for button, child in zip(self.choice_buttons, self.engine.tree_climber.children):
+            size = len(child.pre_order())
+            button.label = f"{size}"
+
         self.display_video_grid()
         self.engine.fetch_videos(self.get_recommendation_parameters())
 
