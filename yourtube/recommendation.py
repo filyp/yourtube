@@ -201,9 +201,8 @@ class TreeClimber:
 
 
 class Engine:
-    def __init__(self, G, driver, parameters):
+    def __init__(self, G, parameters):
         self.G = G
-        self.driver = driver
         self.user = parameters.username
         self.display_callback = lambda: None
         self.message_callback = lambda msg: None
@@ -215,8 +214,7 @@ class Engine:
         self.recommender = Recommender(G, parameters.seed)
 
         self.scraping_thread = Thread()
-        # TODO is it a problem if we don't close the scraper and its pool properly, when app closes?
-        self.scraper = Scraper(driver=driver, G=G)
+        self.scraper = Scraper(G=G)
 
         # if there are too few videos in playlists, it's better to also use watched videos
         use_watched = len(list(added_in_last_n_years(self.G, list(self.G.nodes)))) < 400

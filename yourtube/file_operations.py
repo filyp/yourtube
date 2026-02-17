@@ -13,7 +13,7 @@ import networkx as nx
 import pickledb
 from dateutil import parser
 
-from yourtube.neo4j_queries import (
+from yourtube.json_db import (
     get_all_user_relevant_playlist_info,
     get_limited_user_relevant_video_info,
 )
@@ -24,7 +24,7 @@ logger.setLevel(logging.DEBUG)
 
 id_to_url = "https://www.youtube.com/watch?v={}"
 
-data_path = os.path.join(os.sep, "yourtube", "data")
+data_path = os.path.expanduser("~/.yourtube/data")
 graph_path_template = os.path.join(data_path, "graph_cache", "{}.pickle")
 clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pickle")
 saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
@@ -39,7 +39,7 @@ history_path_template = os.path.join(
 )
 
 
-def load_graph_from_neo4j(driver, user):
+def load_graph(user):
     # see if it's cached
     graph_path = graph_path_template.format(user)
     if os.path.isfile(graph_path):
@@ -52,9 +52,7 @@ def load_graph_from_neo4j(driver, user):
     # load info about which videos have been watched
     id_to_watched_times = get_youtube_watched_ids(user)
 
-    # loading in this awkward way, loads the graph in 2s instead of 25s
-    with driver.session() as s:
-        info = s.read_transaction(get_limited_user_relevant_video_info, user)
+    info = get_limited_user_relevant_video_info(user)
     G = nx.DiGraph()
     for (
         v1_video_id,
@@ -96,8 +94,7 @@ def load_graph_from_neo4j(driver, user):
         G.add_node(v2_video_id, **params_dict_v2)
         G.add_edge(v1_video_id, v2_video_id)
 
-    with driver.session() as s:
-        playlist_info = s.read_transaction(get_all_user_relevant_playlist_info, user)
+    playlist_info = get_all_user_relevant_playlist_info(user)
     for playlist_name, video_id, time_added in playlist_info:
         if video_id not in G.nodes:
             # this means the video had no recommended videos, and wasn't matched by the previous step
@@ -114,11 +111,11 @@ def load_graph_from_neo4j(driver, user):
     return G
 
 
-def load_joined_graph_of_many_users(driver, users):
+def load_joined_graph_of_many_users(users):
     # load graphs of each user
     graphs = []
     for user in users:
-        G = load_graph_from_neo4j(driver, user=user)
+        G = load_graph(user=user)
         graphs.append(G)
 
     # join them

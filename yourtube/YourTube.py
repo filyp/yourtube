@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import panel as pn
 import param
-from neo4j import GraphDatabase
 
 from yourtube.file_operations import (
     user_takeout_exists,
@@ -23,7 +22,7 @@ from yourtube.html_components import (
     required_modules,
 )
 from yourtube.recommendation import Engine
-from yourtube.config import Config, Msgs
+from yourtube.config import Msgs
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -260,7 +259,6 @@ parameters = Parameters(seed=random.randint(1, 9999))
 takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
 # pn.state.location.sync(parameters, ["username"])
 
-driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
 template = pn.template.MaterialTemplate(title="YourTube", theme=pn.template.DarkTheme)
@@ -312,7 +310,7 @@ def refresh(_event):
 
     start_time = time()
     # G = load_graph_from_neo4j(driver, user=parameters.username)
-    G = load_joined_graph_of_many_users(driver, usernames)
+    G = load_joined_graph_of_many_users(usernames)
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
     logger.info(f"user: {parameters.username}, graph size: {len(G.nodes)}")
     if len(G.nodes) == 0:
@@ -324,7 +322,7 @@ def refresh(_event):
     if parameters.seed < 1 or parameters.seed > 9999:
         parameters.seed = random.randint(1, 9999)
 
-    engine = Engine(G, driver, parameters)
+    engine = Engine(G, parameters)
     ui = UI(engine, parameters)
     engine.display_callback = ui.display_video_grid
     engine.message_callback = ui.show_message

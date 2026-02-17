@@ -57,7 +57,12 @@ You can also browse clusters that the other users saved.
 # Local installation
 
 ```bash
-mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/master/docker-compose-release.yml > ~/.yourtube/yourtube.yml ; docker-compose -f ~/.yourtube/yourtube.yml run yourtube poetry run yourtube-install
+git clone https://github.com/filyp/yourtube.git
+cd yourtube
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+yourtube-install
 ```
 
 ## Export YouTube data and scrape it
@@ -77,9 +82,8 @@ mkdir -p ~/.yourtube ; curl -s https://raw.githubusercontent.com/filyp/yourtube/
 
 ### Load your takeout file into yourtube
 ```bash
-sudo chown -R $USER:$USER ~/.yourtube
-mkdir ~/.yourtube/data/takeouts/default
-mv __PATH_TO_YOUR_TAKEOUT__/Takeout .yourtube/data/takeouts/default
+mkdir -p ~/.yourtube/data/takeouts/default
+mv __PATH_TO_YOUR_TAKEOUT__/Takeout ~/.yourtube/data/takeouts/default
 ```
 
 To add other users, do the same, but replace `default` with the username you want to use.
@@ -87,7 +91,8 @@ To add other users, do the same, but replace `default` with the username you wan
 ### Scrape videos
 Now run:
 ```bash
-docker-compose -f ~/.yourtube/yourtube.yml run yourtube poetry run yourtube-scrape
+source .venv/bin/activate
+yourtube-scrape
 ```
 
 It will collect recommendations from the videos in your playlists and from your liked videos, which can take up to an hour.
@@ -96,7 +101,8 @@ It will collect recommendations from the videos in your playlists and from your 
 ## Running
 
 ```bash
-docker-compose -f ~/.yourtube/yourtube.yml down ; docker-compose -f ~/.yourtube/yourtube.yml up -d
+source .venv/bin/activate
+yourtube
 ```
 
-YourTube shuld be now available at: `http://localhost:8866/`
+YourTube should be now available at: `http://localhost:8866/`

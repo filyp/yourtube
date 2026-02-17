@@ -11,7 +11,6 @@ import traceback
 
 import numpy as np
 import requests
-from neo4j import GraphDatabase
 from tqdm import tqdm
 from youtube_transcript_api import (
     NoTranscriptFound,
@@ -27,7 +26,15 @@ from yourtube.file_operations import (
     id_to_url,
     get_usernames,
 )
-from yourtube.neo4j_queries import *
+from yourtube.json_db import (
+    mark_video_as_down,
+    update_video,
+    check_if_this_video_was_scraped,
+    ensure_playlist_exists,
+    add_info_that_video_is_in_playlist,
+    ensure_user_exists,
+    add_watched_times,
+)
 from yourtube.config import Config
 
 
@@ -156,18 +163,17 @@ def get_keywords(content):
     return keywords
 
 
-def scrape_content(content, id_, G=None, driver=None):
+def scrape_content(content, id_, G=None, save_to_db=True):
     """
-    if driver is not None, save the content into neo4j
-    if G is not None, in addition to saving to neo4j, also update G
+    if save_to_db is True, save the content to json_db
+    if G is not None, also update the in-memory graph G
     """
 
     recs = get_recommended_ids(content, id_)
     if len(recs) <= 1:
         # this video is probably removed from youtube
-        if driver is not None:
-            with driver.session() as s:
-                s.write_transaction(mark_video_as_down, id_)
+        if save_to_db:
+            mark_video_as_down(id_)
         if G is not None:
             G.add_node(id_)
             G.nodes[id_]["is_down"] = True
@@ -190,9 +196,8 @@ def scrape_content(content, id_, G=None, driver=None):
         print(traceback.format_exc())
         raise
 
-    if driver is not None:
-        with driver.session() as s:
-            s.write_transaction(update_video, recs, **video_info)
+    if save_to_db:
+        update_video(recs, **video_info)
     if G is not None:
         logging.debug(f"adding node : {id_}")
         G.add_node(id_, **video_info)
@@ -201,12 +206,9 @@ def scrape_content(content, id_, G=None, driver=None):
 
 
 class Scraper:
-    def __init__(self, driver=None, G=None):
+    def __init__(self, G=None):
         self.executor = ProcessPoolExecutor(max_workers=8)
-        self.driver = driver
         self.G = G
-        # Either driver or G (or both) must be given.
-        assert (driver is not None) or (G is not None)
         self.futures = set()
 
     def __enter__(self):
@@ -236,9 +238,8 @@ class Scraper:
                 # no reason to skip this video
                 ids_to_scrape.append(id_)
             else:
-                # if G is not given, use neo4j to decide what to skip
-                with self.driver.session() as s:
-                    result = s.read_transaction(check_if_this_video_was_scraped, id_)
+                # if G is not given, use json_db to decide what to skip
+                result = check_if_this_video_was_scraped(id_)
                 if result == []:
                     # it is not present in the database, so scrape
                     ids_to_scrape.append(id_)
@@ -301,7 +302,7 @@ class Scraper:
             try:
                 content, id_ = future.result()
                 # print(future)
-                scrape_content(content, id_, self.G, self.driver)
+                scrape_content(content, id_, self.G)
             except CancelledError:
                 pass
             except Exception as ex:
@@ -339,24 +340,21 @@ def only_added_in_last_n_years(ids_to_add, times_added, n=5):
 
 
 def scrape_playlist(
-    username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
+    username, playlist_name, scrape_from_last_n_years, skip_if_fresher_than
 ):
     ids_to_add, times_added = get_youtube_playlist_ids(playlist_name, username)
     ids_to_add, times_added = only_added_in_last_n_years(
         ids_to_add, times_added, n=scrape_from_last_n_years
     )
 
-    with Scraper(driver=driver, G=None) as scraper:
+    with Scraper() as scraper:
         scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=skip_if_fresher_than)
 
-    with driver.session() as s:
-        # ensure that this playlist exists in database
-        s.write_transaction(ensure_playlist_exists, username, playlist_name)
-        # add data about the time they were added and from which playlist and user
-        for video_id, time_added in zip(ids_to_add, times_added):
-            s.write_transaction(
-                add_info_that_video_is_in_playlist, username, playlist_name, video_id, time_added
-            )
+    # ensure that this playlist exists in database
+    ensure_playlist_exists(username, playlist_name)
+    # add data about the time they were added and from which playlist and user
+    for video_id, time_added in zip(ids_to_add, times_added):
+        add_info_that_video_is_in_playlist(username, playlist_name, video_id, time_added)
 
 
 #######################################################################################
@@ -371,15 +369,13 @@ def scrape_all_playlists(
     if skip_if_fresher_than is None:
         skip_if_fresher_than = Config.periodic_scraping_skip_if_fresher_than
 
-    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
-
     for username in get_usernames():
         print(f"\n\nSCRAPING USER: {username}")
         for playlist_name in get_playlist_names(username):
             print()
             print("scraping: ", playlist_name)
             scrape_playlist(
-                username, playlist_name, driver, scrape_from_last_n_years, skip_if_fresher_than
+                username, playlist_name, scrape_from_last_n_years, skip_if_fresher_than
             )
 
         if save_watched_data_to_db:
@@ -390,10 +386,9 @@ def scrape_all_playlists(
             # add data about the time they were watched
             # this is not needed now, because we read this data directly from takeout
             print("saving watched videos")
-            with driver.session() as s:
-                s.write_transaction(ensure_user_exists, username)
-                for video_id, watched_times in id_to_watched_times.items():
-                    s.write_transaction(add_watched_times, username, video_id, watched_times)
+            ensure_user_exists(username)
+            for video_id, watched_times in id_to_watched_times.items():
+                add_watched_times(username, video_id, watched_times)
     print(f"\n\nSCRAPING FINISHED")
 
 

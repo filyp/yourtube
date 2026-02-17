@@ -3,16 +3,13 @@ import pathlib
 import subprocess
 from pathlib import Path
 
-from neo4j import GraphDatabase
-
-from yourtube.neo4j_queries import create_username_constraint, create_video_id_constraint
 from yourtube.file_operations import (
     graph_path_template,
     clustering_cache_template,
     saved_clusters_template,
     takeouts_template,
 )
-from yourtube.config import Config
+from yourtube.json_db import ensure_directories
 
 __version__ = "0.7.0"
 
@@ -38,10 +35,6 @@ def install():
     Path(takeouts_template).parent.mkdir(parents=True, exist_ok=True)
 
     print("\n\nSetting up database...")
-    driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
-    # this creates neeeded constraints (which by the way sets up indexes)
-    with driver.session() as s:
-        s.write_transaction(create_video_id_constraint)
-        s.write_transaction(create_username_constraint)
+    ensure_directories()
 
     print("\n\nInstalled successfully")
