@@ -9,7 +9,7 @@ import panel as pn
 import param
 
 from yourtube.file_operations import (
-    load_joined_graph_of_many_users,
+    load_graph,
     get_saved_clusters,
 )
 from yourtube.html_components import (
@@ -19,7 +19,6 @@ from yourtube.html_components import (
     required_modules,
 )
 from yourtube.recommendation import Engine
-from yourtube.config import Msgs
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -263,16 +262,13 @@ def refresh(_event):
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
-    usernames = parameters.username.split("+")
-
     start_time = time()
-    # G = load_graph_from_neo4j(driver, user=parameters.username)
-    G = load_joined_graph_of_many_users(usernames)
+    G = load_graph()
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
-    logger.info(f"user: {parameters.username}, graph size: {len(G.nodes)}")
+    logger.info(f"graph size: {len(G.nodes)}")
     if len(G.nodes) == 0:
         logger.error(f"user: {parameters.username}, tried to load an empty graph")
-        template.main[0][0] = pn.pane.Markdown(Msgs.trying_to_load_empty_graph)
+        template.main[0][0] = pn.pane.Markdown("Nothing to show :(")
         return
 
     # ensure correct param values

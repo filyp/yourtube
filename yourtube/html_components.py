@@ -2,8 +2,6 @@ import panel as pn
 import param
 from panel.reactive import ReactiveHTML
 
-from yourtube.file_operations import id_to_url
-
 id_to_thumbnail = "https://i.ytimg.com/vi/{}/mqdefault.jpg"
 # id_to_thumbnail = "https://i.ytimg.com/vi/{}/maxresdefault.jpg"
 # hq and sd usually has black stripes
@@ -188,7 +186,7 @@ class VideoGrid(ReactiveHTML):
         for i in range(n):
             id_handle = "${ids[" + str(i) + "]}"
             text_handle = "${texts[" + str(i) + "]}"
-            video_url = id_to_url.format(id_handle)
+            video_url = f"https://www.youtube.com/watch?v={id_handle}"
             image_url = id_to_thumbnail.format(id_handle)
 
             html += f"""

@@ -6,26 +6,27 @@ from concurrent.futures import (
     as_completed,
 )
 from time import time
-import traceback
 
 import numpy as np
 import requests
 from tqdm import tqdm
-from youtube_transcript_api import (
-    NoTranscriptFound,
-    TranscriptsDisabled,
-    YouTubeTranscriptApi,
-)
-from yourtube.file_operations import id_to_url
+# from youtube_transcript_api import (
+#     NoTranscriptFound,
+#     TranscriptsDisabled,
+#     YouTubeTranscriptApi,
+# )
+
 from yourtube.json_db import (
-    mark_video_as_down,
-    update_video,
     check_if_this_video_was_scraped,
+    get_playlist_video_ids,
+    update_video,
 )
+
+logger = logging.getLogger("yourtube")
 
 
 def get_content(id_):
-    url = id_to_url.format(id_)
+    url = f"https://www.youtube.com/watch?v={id_}"
     content = requests.get(url, cookies={"CONSENT": "YES+1"}, timeout=60)
     return content, id_
 
@@ -38,148 +39,23 @@ def get_recommended_ids(content, id_):
     return recs
 
 
-def get_title(content):
-    text = content.text.replace("\n", " ")
-    candidates = re.findall(
-        r'"videoPrimaryInfoRenderer":{"title":{"runs":\[{"text":"(.*?)"}',
-        text,
-    )
-
-    assert len(candidates) == 1
-    title = candidates[0]
-
-    # make title human readable
-    title = title.replace("&#39;", "'")
-    title = title.replace("&amp;", "&")
-    title = title.replace("&quot;", '"')
-    return title
-
-
-def get_view_count(content):
-    # it's not needed anymore, and causes problems when youtube changes the format
-    return None
-    # candidates = re.findall(r'"viewCount":"([0-9]+)"', content.text)
-    # candidates = set(candidates)
-    # assert 1 <= len(candidates) <= 2, candidates
-    # if len(candidates) == 2:
-    #     # premium videos list 2 different video versions
-    #     return None
-    # view_count = candidates.pop()
-    # return int(view_count)
-
-
-def get_like_count(content):
-    candidates = re.findall(
-        r'{"iconType":"LIKE"},"defaultText":{"accessibility":{"accessibilityData":{"label":"(.*?)"',
-        content.text,
-    )
-    candidates = set(candidates)
-    assert len(candidates) <= 1
-    if candidates:
-        like_string = candidates.pop()
-    else:
-        # likes are probably disabled
-        return None
-    like_string = like_string.replace("\xa0", "")
-    like_string = like_string.replace(",", "")
-    like_count = re.findall(r"[0-9]+", like_string)
-    if like_count == []:
-        # there are no likes
-        return 0
-    return int(like_count[0])
-
-
-def get_channel_id(content):
-    candidates = re.findall(
-        r'"subscribeCommand":{"clickTrackingParams":".*?","commandMetadata":{"webCommandMetadata":{"sendPost":true,"apiUrl":"/youtubei/v1/subscription/subscribe"}},"subscribeEndpoint":{"channelIds":\["(.*?)"\]',
-        content.text,
-    )
-    candidates = set(candidates)
-    assert len(candidates) <= 1
-    channel_id = candidates.pop() if candidates else None
-    # no candidates probably means that the video is unavailable
-    return channel_id
-
-
-def get_category(content):
-    # it's not needed anymore, and causes problems when youtube changes the format
-    return ""
-    # candidates = re.findall(r'"category":"(.*?)"', content.text)
-    # candidates = set(candidates)
-    # assert 1 <= len(candidates) <= 2
-    # if len(candidates) == 2:
-    #     assert candidates == {"Trailers", "Movies"}
-    #     # youtube movies have these two categories, so just say it's a movie
-    #     return "Movies"
-    # category = candidates.pop()
-    # category = category.replace("\\u0026", "&")
-    # return category
-
-
-def get_length(content):
-    # it's not needed anymore, and causes problems when youtube changes the format
-    return 0
-    # candidates = re.findall(r'"videoDetails":.*?"lengthSeconds":"(.*?)"', content.text)
-    # candidates = set(candidates)
-    # assert 1 <= len(candidates) <= 2
-    # if len(candidates) == 2:
-    #     # premium videos list 2 different lengths
-    #     return None
-    # length = candidates.pop()
-    # return int(length)
-
-
-def get_keywords(content):
-    candidates = re.findall(r'"keywords":\[(.*?)\]', content.text)
-    candidates = set(candidates)
-    assert len(candidates) <= 1
-    if len(candidates) == 0:
-        # there are no keywords
-        return []
-    keywords = candidates.pop()
-    keywords = keywords.replace('"', "")
-    keywords = keywords.split(",")
-    return keywords
-
-
-def scrape_content(content, id_, G=None, save_to_db=True):
+def scrape_content(content, id_, G=None):
     """
-    if save_to_db is True, save the content to json_db
     if G is not None, also update the in-memory graph G
     """
-
     recs = get_recommended_ids(content, id_)
     if len(recs) <= 1:
         # this video is probably removed from youtube
-        if save_to_db:
-            mark_video_as_down(id_)
+        update_video(id_, [], time(), is_down=True)
         if G is not None:
             G.add_node(id_)
             G.nodes[id_]["is_down"] = True
         return
 
-    video_info = dict()
-    video_info["video_id"] = id_
-    try:
-        video_info["title"] = get_title(content)
-        video_info["view_count"] = get_view_count(content)
-        video_info["like_count"] = get_like_count(content)
-        video_info["channel_id"] = get_channel_id(content)
-        video_info["category"] = get_category(content)
-        video_info["length"] = get_length(content)
-        video_info["keywords"] = get_keywords(content)
-        video_info["time_scraped"] = time()
-    except Exception:
-        print("\n\nscraping failed for video: ", id_)
-        # print everything about the error that we can
-        print(traceback.format_exc())
-        raise
-
-    if save_to_db:
-        update_video(recs, **video_info)
+    update_video(id_, recs, time())
     if G is not None:
         logging.debug(f"adding node : {id_}")
-        G.add_node(id_, **video_info)
+        G.add_node(id_, time_scraped=time())
         for rec in recs:
             G.add_edge(id_, rec)
 
@@ -246,7 +122,7 @@ class Scraper:
 
     def scrape_from_list(self, ids, skip_if_fresher_than=None, non_verbose=False):
         """
-        Scrapes videos from the ids list and adds them to neo4j database and/or networkx graph
+        Scrapes videos from the ids list and saves recommendations to ~/.yourtube/videos/
 
         ids:
             can be multidimensional, as long as it is convertible to numpy array
@@ -254,7 +130,6 @@ class Scraper:
         skip_if_fresher_than:
             is in seconds
             if set, videos scraped more recently than this time will be skipped
-
         """
         # flatten
         ids = np.array(ids).flatten()
@@ -263,7 +138,9 @@ class Scraper:
         ids_to_scrape = self.choose_which_video_to_skip(ids, skip_if_fresher_than)
 
         if not non_verbose:
-            print(f"skipped {len(ids) - len(ids_to_scrape)} videos, to scrape {len(ids_to_scrape)}")
+            print(
+                f"skipped {len(ids) - len(ids_to_scrape)} videos, to scrape {len(ids_to_scrape)}"
+            )
 
         futures = set()
         for id_ in ids_to_scrape:
@@ -280,7 +157,6 @@ class Scraper:
         ):
             try:
                 content, id_ = future.result()
-                # print(future)
                 scrape_content(content, id_, self.G)
             except CancelledError:
                 pass
@@ -296,10 +172,22 @@ class Scraper:
                 pass
 
     def cancel_all_tasks(self):
-        # it is a copy, because self.futures can be changexd by other thread while this loop runs
+        # it is a copy, because self.futures can be changed by other thread while this loop runs
         for future in self.futures.copy():
             future.cancel()
-            # print("cancelled: ", future)
+
+
+def scrape_recommendations(skip_if_fresher_than=60 * 60 * 24 * 7):
+    """Scrape recommendations for all videos found in playlist JSONs."""
+    video_ids = get_playlist_video_ids()
+    print(f"Found {len(video_ids)} videos in playlists")
+
+    with Scraper() as scraper:
+        scraper.scrape_from_list(
+            list(video_ids), skip_if_fresher_than=skip_if_fresher_than
+        )
+
+    print("\nSCRAPING FINISHED")
 
 
 # def get_transript(id_):
@@ -307,7 +195,6 @@ class Scraper:
 #         return YouTubeTranscriptApi.get_transcript(id_)
 #     except (TranscriptsDisabled, NoTranscriptFound):
 #         return None
-
 
 
 # with ProcessPoolExecutor(max_workers=8) as executor:

@@ -14,7 +14,7 @@ from krakow.utils import create_dendrogram, split_into_n_children, normalized_da
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import clustering_cache_template, saved_clusters_template
-from yourtube.filtering_functions import *
+from yourtube.filtering_functions import added_in_last_n_years, select_nodes_to_cluster
 from yourtube.scraping import Scraper
 
 logger = logging.getLogger("yourtube")
@@ -32,6 +32,7 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
     unique_string = "".join(sorted_nodes)
     node_hash = hashlib.md5(unique_string.encode()).hexdigest()
     unique_string = f"{balance_alpha:.2f}_{balance_beta:.2f}_{node_hash}"
+    Path(clustering_cache_template).parent.mkdir(parents=True, exist_ok=True)
     cache_file = clustering_cache_template.format(unique_string)
     if os.path.isfile(cache_file):
         logger.info(f"using cached clustering: {cache_file}")

@@ -1,6 +1,6 @@
 [project]
 name = "yourtube"
-version = "0.7.0"
+version = "1.0.0"
 description = "Better youtube recommendations"
 authors = [{name = "Filip Sondej", email = "filipsondej@protonmail.com"}]
 license = {text = "LGPL-2.1"}
@@ -25,8 +25,8 @@ dependencies = [
 
 [project.scripts]
 yourtube = "yourtube.__init__:run"
-yourtube-install = "yourtube.__init__:install"
 yourtube-fetch-playlists = "yourtube.fetch_playlists:main"
+yourtube-scrape = "yourtube.scraping:scrape_recommendations"
 
 [build-system]
 requires = ["setuptools>=64"]

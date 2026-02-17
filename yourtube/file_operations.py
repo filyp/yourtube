@@ -1,97 +1,53 @@
 import glob
-import json
 import logging
 import os
-from pathlib import Path
+from time import time
 
 import networkx as nx
-import pickledb
 
 from yourtube.json_db import (
-    get_all_user_relevant_playlist_info,
-    get_limited_user_relevant_video_info,
+    get_video_recommendations,
+    get_playlist_entries,
 )
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
 
-id_to_url = "https://www.youtube.com/watch?v={}"
-
 data_path = os.path.expanduser("~/.yourtube/data")
 clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pickle")
 saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
-transcripts_path = os.path.join(data_path, "transcripts.json")
 
 
-def load_graph(user):
-    info = get_limited_user_relevant_video_info(user)  # 200 ms
+def load_graph():
     G = nx.DiGraph()
-    for (
-        v1_video_id,
-        v1_title,
-        v1_view_count,
-        v1_like_count,
-        v1_time_scraped,
-        v1_is_down,
-        v2_video_id,
-        v2_title,
-        v2_view_count,
-        v2_like_count,
-        v2_time_scraped,
-        v2_is_down,
-    ) in info:
-        # load the parameters returned by neo4j, and delete None values
-        params_dict_v1 = dict(
-            title=v1_title,
-            view_count=v1_view_count,
-            like_count=v1_like_count,
-            time_scraped=v1_time_scraped,
-            is_down=v1_is_down,
-        )
-        params_dict_v1 = {k: v for k, v in params_dict_v1.items() if v is not None}
-        params_dict_v2 = dict(
-            title=v2_title,
-            view_count=v2_view_count,
-            like_count=v2_like_count,
-            time_scraped=v2_time_scraped,
-            is_down=v2_is_down,
-        )
-        params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
 
-        G.add_node(v1_video_id, **params_dict_v1)
-        G.add_node(v2_video_id, **params_dict_v2)
-        G.add_edge(v1_video_id, v2_video_id)
-
-    playlist_info = get_all_user_relevant_playlist_info(user)
-    for playlist_name, video_id, time_added in playlist_info:
-        if video_id not in G.nodes:
-            # this means the video had no recommended videos, and wasn't matched by the previous step
-            # so it's probably down
+    # add edges from video recommendations
+    for v1_id, v1_is_down, v2_id, v2_is_down in get_video_recommendations():
+        if v1_is_down:
+            G.add_node(v1_id, is_down=True)
             continue
-        G.nodes[video_id]["from"] = playlist_name
-        G.nodes[video_id]["time_added"] = time_added
+        G.add_node(v1_id)
+        if v2_is_down:
+            G.add_node(v2_id, is_down=True)
+        else:
+            G.add_node(v2_id)
+        G.add_edge(v1_id, v2_id)
+
+    # add playlist metadata from yt-dlp playlist entries
+    for playlist_name, video_id, entry in get_playlist_entries():
+        if video_id not in G.nodes:
+            continue
+        node = G.nodes[video_id]
+        node["from"] = playlist_name
+        node["title"] = entry.get("title")
+        node["view_count"] = entry.get("view_count")
+        node["channel"] = entry.get("channel")
+        node["duration"] = entry.get("duration")
+        # yt-dlp doesn't provide when a video was added to the playlist,
+        # so use current time (all fetched entries are "current")
+        node["time_added"] = time()
+
     return G
-
-
-def load_joined_graph_of_many_users(users):
-    # load graphs of each user
-    graphs = []
-    for user in users:
-        G = load_graph(user=user)
-        graphs.append(G)
-
-    # join them
-    joined_graph = graphs[0]
-    for G in graphs[1:]:
-        if len(G.nodes) == 0:
-            logger.error(f"user: {user}, tried to load an empty graph in multi-user mode")
-        joined_graph.update(G)
-
-    return joined_graph
-
-
-def get_transcripts_db():
-    return pickledb.load(transcripts_path, auto_dump=False)
 
 
 def get_saved_clusters(username):
