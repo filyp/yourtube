@@ -1,6 +1,5 @@
 # note that they are all generators
 
-from itertools import chain
 from time import time
 
 
@@ -17,26 +16,6 @@ def added_in_last_n_years(G, ids, n=5):
         if "time_added" not in node:
             continue
         if start_time < node["time_added"]:
-            yield id_
-
-
-def only_not_watched(G, ids):
-    for id_ in ids:
-        # if id_ not in G.nodes:
-        #     yield id_  # if it's not in the graph, assume it's not watched
-        #     continue
-        node = G.nodes[id_]
-        if not node.get("watched"):
-            yield id_
-
-
-def only_watched(G, ids):
-    for id_ in ids:
-        # if id_ not in G.nodes:
-        #     # if it's not in the graph, assume it's not watched
-        #     continue
-        node = G.nodes[id_]
-        if node.get("watched"):
             yield id_
 
 
@@ -61,13 +40,7 @@ def get_neighborhood(G, ids):
     return G.edge_subgraph(out_edges).nodes
 
 
-def select_nodes_to_cluster(G, use_watched=False):
+def select_nodes_to_cluster(G):
     sources = added_in_last_n_years(G, list(G.nodes), n=5)
-    if use_watched:
-        watched = only_watched(G, list(G.nodes))
-        # note that some videos will be duplicated because of this chain
-        # but it's more efficient this way
-        sources = chain(sources, watched)
-
     sources = not_down(G, sources)
     return list(get_neighborhood(G, sources))

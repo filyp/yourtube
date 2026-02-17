@@ -3,7 +3,6 @@ import re
 from concurrent.futures import (
     CancelledError,
     ProcessPoolExecutor,
-    ThreadPoolExecutor,
     as_completed,
 )
 from time import time
@@ -17,38 +16,18 @@ from youtube_transcript_api import (
     TranscriptsDisabled,
     YouTubeTranscriptApi,
 )
-
-from yourtube.file_operations import (
-    get_playlist_names,
-    get_transcripts_db,
-    get_youtube_playlist_ids,
-    get_youtube_watched_ids,
-    id_to_url,
-    get_usernames,
-)
+from yourtube.file_operations import id_to_url
 from yourtube.json_db import (
     mark_video_as_down,
     update_video,
     check_if_this_video_was_scraped,
-    ensure_playlist_exists,
-    add_info_that_video_is_in_playlist,
-    ensure_user_exists,
-    add_watched_times,
 )
-from yourtube.config import Config
 
 
 def get_content(id_):
     url = id_to_url.format(id_)
     content = requests.get(url, cookies={"CONSENT": "YES+1"}, timeout=60)
     return content, id_
-
-
-def get_transript(id_):
-    try:
-        return YouTubeTranscriptApi.get_transcript(id_)
-    except (TranscriptsDisabled, NoTranscriptFound):
-        return None
 
 
 def get_recommended_ids(content, id_):
@@ -323,120 +302,29 @@ class Scraper:
             # print("cancelled: ", future)
 
 
-def only_added_in_last_n_years(ids_to_add, times_added, n=5):
-    seconds_in_year = 60 * 60 * 24 * 365
-    start_time = time() - seconds_in_year * n
-
-    filtered_pairs = []
-    for id_to_add, time_added in zip(ids_to_add, times_added):
-        if start_time < time_added:
-            filtered_pairs.append((id_to_add, time_added))
-
-    if filtered_pairs == []:
-        return [], []
-
-    filtered_ids_to_add, filtered_times_to_add = zip(*filtered_pairs)
-    return filtered_ids_to_add, filtered_times_to_add
+# def get_transript(id_):
+#     try:
+#         return YouTubeTranscriptApi.get_transcript(id_)
+#     except (TranscriptsDisabled, NoTranscriptFound):
+#         return None
 
 
-def scrape_playlist(
-    username, playlist_name, scrape_from_last_n_years, skip_if_fresher_than
-):
-    ids_to_add, times_added = get_youtube_playlist_ids(playlist_name, username)
-    ids_to_add, times_added = only_added_in_last_n_years(
-        ids_to_add, times_added, n=scrape_from_last_n_years
-    )
 
-    with Scraper() as scraper:
-        scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=skip_if_fresher_than)
+# with ProcessPoolExecutor(max_workers=8) as executor:
+#     future_to_id = {executor.submit(get_transript, id_): id_ for id_ in ids}
+#     for future in tqdm(
+#         as_completed(future_to_id),
+#         total=len(ids),
+#         ncols=80,
+#         smoothing=0.05,
+#     ):
+#         id_ = future_to_id[future]
+#         try:
+#             transcript = future.result()
+#         except Exception as ex:
+#             print("thread generated an exception: %s" % (ex))
+#             continue
+#         transcripts_db[id_] = transcript
 
-    # ensure that this playlist exists in database
-    ensure_playlist_exists(username, playlist_name)
-    # add data about the time they were added and from which playlist and user
-    for video_id, time_added in zip(ids_to_add, times_added):
-        add_info_that_video_is_in_playlist(username, playlist_name, video_id, time_added)
-
-
-#######################################################################################
-# exposed functions:
-
-
-def scrape_all_playlists(
-    scrape_from_last_n_years=None, skip_if_fresher_than=None, save_watched_data_to_db=False
-):
-    if scrape_from_last_n_years is None:
-        scrape_from_last_n_years = Config.scrape_playlist_items_from_last_n_years
-    if skip_if_fresher_than is None:
-        skip_if_fresher_than = Config.periodic_scraping_skip_if_fresher_than
-
-    for username in get_usernames():
-        print(f"\n\nSCRAPING USER: {username}")
-        for playlist_name in get_playlist_names(username):
-            print()
-            print("scraping: ", playlist_name)
-            scrape_playlist(
-                username, playlist_name, scrape_from_last_n_years, skip_if_fresher_than
-            )
-
-        if save_watched_data_to_db:
-            # also add information, which videos have been watched
-            id_to_watched_times = get_youtube_watched_ids(username)
-            # note: it looks that in watched videos, there are only stored watches from the last 5 years
-
-            # add data about the time they were watched
-            # this is not needed now, because we read this data directly from takeout
-            print("saving watched videos")
-            ensure_user_exists(username)
-            for video_id, watched_times in id_to_watched_times.items():
-                add_watched_times(username, video_id, watched_times)
-    print(f"\n\nSCRAPING FINISHED")
-
-
-# def scrape_watched(username="default"):
-#     driver = GraphDatabase.driver("neo4j://neo4j:7687", auth=("neo4j", Config.neo4j_password))
-
-#     id_to_watched_times = get_youtube_watched_ids(username)
-#     # note: it looks that in watched videos, there are only stored watches from the last 5 years
-
-#     ids_to_add = list(id_to_watched_times.keys())
-#     with Scraper(driver=driver, G=None) as scraper:
-#         scraper.scrape_from_list(ids_to_add, skip_if_fresher_than=seconds_in_month)
-
-#     # add data about the time they were added
-#     # assumes that the videos already exist in the DB (they were added in the previous step)
-#     # todo? this should be mandatory, even if we aren't scraping all the watched
-#     with driver.session() as s:
-#         for video_id, watched_times in id_to_watched_times.items():
-#             s.write_transaction(add_watched_times, video_id, watched_times)
-
-
-def scrape_transcripts_from_watched_videos(username="default"):
-    # note that already scraped videos won't be skipped
-    # as is the case with other scraping functions
-    # also no saving db in case of some failure
-    id_to_watched_times = get_youtube_watched_ids(username)
-    # note: it looks that in watched videos, there are only stored watches from the last 5 years
-    ids = id_to_watched_times.keys()
-
-    transcripts_db = get_transcripts_db()
-
-    with ProcessPoolExecutor(max_workers=8) as executor:
-        future_to_id = {executor.submit(get_transript, id_): id_ for id_ in ids}
-        for future in tqdm(
-            as_completed(future_to_id),
-            total=len(ids),
-            ncols=80,
-            smoothing=0.05,
-        ):
-            id_ = future_to_id[future]
-            try:
-                transcript = future.result()
-            except Exception as ex:
-                print("thread generated an exception: %s" % (ex))
-                continue
-            transcripts_db[id_] = transcript
-
-            # delete this dict entry, to prevent this dict from eating all the RAM
-            del future_to_id[future]
-
-    transcripts_db.dump()
+#         # delete this dict entry, to prevent this dict from eating all the RAM
+#         del future_to_id[future]

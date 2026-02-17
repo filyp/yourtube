@@ -20,13 +20,13 @@ dependencies = [
     "param>=1,<2",
     "krakow>=0.2.0,<1",
     "pyyaml>=6.0.1,<7",
+    "yt-dlp>=2026.2.4",
 ]
 
 [project.scripts]
 yourtube = "yourtube.__init__:run"
 yourtube-install = "yourtube.__init__:install"
-yourtube-scrape = "yourtube.scraping:scrape_all_playlists"
-yourtube-scrape-transcripts = "yourtube.scraping:scrape_transcripts_from_watched_videos"
+yourtube-fetch-playlists = "yourtube.fetch_playlists:main"
 
 [build-system]
 requires = ["setuptools>=64"]

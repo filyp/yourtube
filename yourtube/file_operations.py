@@ -1,11 +1,7 @@
-import csv
+import glob
 import json
 import logging
 import os
-import re
-import zipfile
-import glob
-from datetime import datetime
 from pathlib import Path
 
 import networkx as nx
@@ -26,19 +22,8 @@ clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pick
 saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
 transcripts_path = os.path.join(data_path, "transcripts.json")
 
-takeouts_template = os.path.join(data_path, "takeouts", "{}")
-playlists_path_template = os.path.join(
-    takeouts_template, "Takeout", "YouTube and YouTube Music", "playlists"
-)
-history_path_template = os.path.join(
-    takeouts_template, "Takeout", "YouTube and YouTube Music", "history", "watch-history.html"
-)
-
 
 def load_graph(user):
-    # load info about which videos have been watched
-    id_to_watched_times = get_youtube_watched_ids(user)  # 400 ms
-
     info = get_limited_user_relevant_video_info(user)  # 200 ms
     G = nx.DiGraph()
     for (
@@ -73,14 +58,10 @@ def load_graph(user):
         )
         params_dict_v2 = {k: v for k, v in params_dict_v2.items() if v is not None}
 
-        # check if they were watched
-        params_dict_v1["watched"] = v1_video_id in id_to_watched_times
-        params_dict_v2["watched"] = v2_video_id in id_to_watched_times
-
         G.add_node(v1_video_id, **params_dict_v1)
         G.add_node(v2_video_id, **params_dict_v2)
         G.add_edge(v1_video_id, v2_video_id)
-    
+
     playlist_info = get_all_user_relevant_playlist_info(user)
     for playlist_name, video_id, time_added in playlist_info:
         if video_id not in G.nodes:
@@ -102,8 +83,6 @@ def load_joined_graph_of_many_users(users):
     # join them
     joined_graph = graphs[0]
     for G in graphs[1:]:
-        # joined_graph.add_nodes_from(G.nodes(data=True))
-        # joined_graph.add_edges_from(G.edges())
         if len(G.nodes) == 0:
             logger.error(f"user: {user}, tried to load an empty graph in multi-user mode")
         joined_graph.update(G)
@@ -113,119 +92,6 @@ def load_joined_graph_of_many_users(users):
 
 def get_transcripts_db():
     return pickledb.load(transcripts_path, auto_dump=False)
-
-
-def get_playlist_names(username):
-    playlist_path = playlists_path_template.format(username)
-    for filename in os.listdir(playlist_path):
-        match = re.match(r"(.*)\.csv", filename)
-        if match is not None:
-            yield match[1]
-        else:
-            # it looks that playlists with a dot in their filename don't have '.csv' at the end
-            abs_filename = os.path.join(playlist_path, filename)
-            os.rename(abs_filename, abs_filename + ".csv")
-            yield filename
-
-
-def get_freetube_favorites_ids():
-    with open("/home/filip/.config/FreeTube/playlists.db") as db:
-        lines = db.readlines()
-    playlist = json.loads(lines[-1])
-    videos = playlist["videos"]
-    video_ids = [video["videoId"] for video in videos]
-    return video_ids
-
-
-def timestamp_to_seconds(timestamp):
-    # warning: may be inaccurate up to a few hours because of timezones
-    # but here, few hours aren't a problem
-    try:
-        # ISO 8601 format from playlist CSVs: "2020-09-23T11:01:20+00:00"
-        return datetime.fromisoformat(timestamp).timestamp()
-    except ValueError:
-        # watch history format: "Aug 29, 2024, 10:17:01 AM CEST"
-        # strip the timezone abbreviation since strptime can't parse it
-        ts = timestamp.rsplit(" ", 1)[0]
-        return datetime.strptime(ts, "%b %d, %Y, %I:%M:%S %p").timestamp()
-
-
-def get_youtube_playlist_ids(playlist_name, username):
-    playlists_path = playlists_path_template.format(username)
-    filename = os.path.join(playlists_path, f"{playlist_name}.csv")
-    with open(filename) as file:
-        reader = csv.reader(file, delimiter=",")
-        data_read = [row for row in reader]
-
-    # strip metadata
-    data_read = [row for row in data_read if len(row) == 2 and len(row[0]) == 11]
-    if data_read:
-        ids, timestamps = zip(*data_read)
-    else:
-        ids = []
-        timestamps = []
-    # strip whitespaces
-    video_ids = [id_.strip() for id_ in ids]
-    times_added = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-    return video_ids, times_added
-
-
-def get_youtube_watched_ids(username):
-    """Returns a dictionary, where keys are video ids,
-    and each value is a list of times when this video has been watched (in unix time).
-
-    Unwatched videos aren't in this dictionary.
-    """
-    history_path = history_path_template.format(username)
-    with open(history_path, encoding="utf-8") as file:
-        lines = file.readlines()
-    text = " ".join(lines)
-
-    watched = re.findall(
-        r"Watched.*?https://www.youtube.com\/watch\?v=(.{11}).*?<br>((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) .*?)</div>",
-        text,
-    )
-
-    ids, timestamps, _ = zip(*watched)
-    unixtimes = [timestamp_to_seconds(timestamp) for timestamp in timestamps]
-
-    id_set = set(ids)
-
-    id_to_watched_times = dict()
-    for id_ in id_set:
-        id_to_watched_times[id_] = []
-    for id_, watched_time in zip(ids, unixtimes):
-        id_to_watched_times[id_].append(watched_time)
-
-    return id_to_watched_times
-
-
-def user_takeout_exists(username):
-    return os.path.exists(playlists_path_template.format(username))
-
-
-def get_usernames():
-    for abs_path in glob.glob(playlists_path_template.format("*")):
-        yield Path(abs_path).parts[-4]
-
-
-def update_user_takeout(username, takeout_file_input):
-    # make sure user's takeout folder exists
-    user_takeout_dir = takeouts_template.format(username)
-    Path(user_takeout_dir).mkdir(parents=True, exist_ok=True)
-
-    # save takeout file
-    takeout_filename = os.path.join(takeouts_template.format(username), "takeout.zip")
-    takeout_file_input.save(takeout_filename)
-
-    # unzip takeout file
-    with zipfile.ZipFile(takeout_filename, "r") as zip_ref:
-        zip_ref.extractall(Path(takeout_filename).parent)
-
-    # verify that the takeout file is valid
-    playlist_exist = os.path.exists(playlists_path_template.format(username))
-    history_exists = os.path.exists(history_path_template.format(username))
-    return playlist_exist and history_exists
 
 
 def get_saved_clusters(username):

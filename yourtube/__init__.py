@@ -6,9 +6,8 @@ from pathlib import Path
 from yourtube.file_operations import (
     clustering_cache_template,
     saved_clusters_template,
-    takeouts_template,
 )
-from yourtube.json_db import ensure_directories
+from yourtube.json_db import VIDEOS_DIR, PLAYLISTS_DIR
 
 __version__ = "0.7.0"
 
@@ -26,12 +25,8 @@ def run():
 
 
 def install():
-    print("\n\nCreating necessary paths...")
     Path(clustering_cache_template).parent.mkdir(parents=True, exist_ok=True)
     Path(saved_clusters_template).parent.parent.mkdir(parents=True, exist_ok=True)
-    Path(takeouts_template).parent.mkdir(parents=True, exist_ok=True)
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
+    os.makedirs(PLAYLISTS_DIR, exist_ok=True)
 
-    print("\n\nSetting up database...")
-    ensure_directories()
-
-    print("\n\nInstalled successfully")

@@ -144,9 +144,6 @@ class Recommender:
             for grandchild in grandchildren_from_a_child:
                 # this line is the speed bottleneck
                 ids = grandchild.pre_order()
-                # filter ids
-                if params["hide_watched"]:
-                    ids = list(only_not_watched(self.G, ids))
                 id_to_show = self.recommend_by_in_degree(ids, params)
                 ids_to_show_in_group.append(id_to_show)
             ids_to_show_in_wall.append(ids_to_show_in_group)
@@ -216,12 +213,7 @@ class Engine:
         self.scraping_thread = Thread()
         self.scraper = Scraper(G=G)
 
-        # if there are too few videos in playlists, it's better to also use watched videos
-        use_watched = len(list(added_in_last_n_years(self.G, list(self.G.nodes)))) < 400
-        nodes_to_cluster = select_nodes_to_cluster(
-            self.G,
-            use_watched=use_watched,
-        )
+        nodes_to_cluster = select_nodes_to_cluster(self.G)
         self._nodes = nodes_to_cluster
 
         tree, self.dendrogram_img, clustering_quality = cluster_subgraph(

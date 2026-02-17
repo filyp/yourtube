@@ -9,14 +9,11 @@ import panel as pn
 import param
 
 from yourtube.file_operations import (
-    user_takeout_exists,
-    update_user_takeout,
     load_joined_graph_of_many_users,
     get_saved_clusters,
 )
 from yourtube.html_components import (
     MaterialButton,
-    MaterialSwitch,
     MaterialTextField,
     VideoGrid,
     required_modules,
@@ -78,9 +75,6 @@ class UI:
         )
         go_back_button.on_click = self.go_back
 
-        self.hide_watched_checkbox = MaterialSwitch(initial_value=False, width=40)
-        self.hide_watched_checkbox.on_event("switch_id", "click", self.update_displayed_videos)
-
         refresh_button = MaterialButton(
             label="Refresh",
             style="width: 110px; height:57px",
@@ -109,8 +103,6 @@ class UI:
         top = pn.Row(
             go_back_button,
             pn.Spacer(width=20),
-            self.hide_watched_checkbox,
-            pn.pane.HTML("Hide watched videos"),
             self.exploration_slider,
             refresh_button,
             pn.Spacer(width=20),
@@ -170,7 +162,6 @@ class UI:
 
     def get_recommendation_parameters(self):
         return dict(
-            hide_watched=self.hide_watched_checkbox.value,
             exploration=self.exploration_slider.value,
         )
 
@@ -256,7 +247,6 @@ class Parameters(param.Parameterized):
 
 
 parameters = Parameters(seed=random.randint(1, 9999))
-takeout_file_input = pn.widgets.FileInput(accept=".zip", multiple=False)
 # pn.state.location.sync(parameters, ["username"])
 
 
@@ -269,44 +259,11 @@ def refresh(_event):
     # it looks that it needs to be global, so that ui gets dereferenced, and can disappear
     # otherwise it is still bound to the new panel buttons, probably due to some panel quirk
     # and this causes each click to be executed double
-    global ui, engine, G, takeout_file_input
+    global ui, engine, G
     logger.info("refreshed")
     template.main[0][0] = pn.Spacer()
 
     usernames = parameters.username.split("+")
-    if len(usernames) == 1:
-        username = usernames[0]
-        if "/" in username:
-            logger.info(f"bad username: {username}")
-            template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
-            return
-        if (not user_takeout_exists(username)) and (takeout_file_input.value is None):
-            template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
-            return
-        elif (not user_takeout_exists(username)) and (takeout_file_input.value is not None):
-            logger.info("creating new user")
-            takeout_ok = update_user_takeout(username, takeout_file_input)
-            if takeout_ok:
-                logger.info(f"created new user: {username}")
-                template.main[0][0] = pn.pane.Markdown(Msgs.user_created)
-            else:
-                logger.error(f"failed to create a new user: {username}")
-                template.main[0][0] = pn.pane.Markdown(Msgs.user_creation_failed)
-            return
-        elif user_takeout_exists(username) and (takeout_file_input.value is not None):
-            logger.info(f"someone tried to create a new user with existing username: {username}")
-            template.main[0][0] = pn.pane.Markdown(Msgs.user_already_exists)
-            return
-    else:
-        # multiple users!
-        for username in usernames:
-            if "/" in username:
-                logger.info(f"bad username: {username}")
-                template.main[0][0] = pn.pane.Markdown(Msgs.bad_username)
-                return
-            if not user_takeout_exists(username):
-                template.main[0][0] = pn.pane.Markdown(Msgs.user_doesnt_exist.format(username))
-                return
 
     start_time = time()
     # G = load_graph_from_neo4j(driver, user=parameters.username)
@@ -334,7 +291,6 @@ refresh_button = pn.widgets.Button(name="Refresh")
 refresh_button.on_click(refresh)
 
 template.sidebar.append(parameters)
-template.sidebar.append(takeout_file_input)
 template.sidebar.append(refresh_button)
 template.servable()
 

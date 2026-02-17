@@ -6,7 +6,6 @@ from yourtube.config import Config
 
 VIDEOS_DIR = os.path.join(Config.json_db_path, "videos")
 PLAYLISTS_DIR = os.path.join(Config.json_db_path, "playlists")
-USERS_DIR = os.path.join(Config.json_db_path, "users")
 
 
 def _read_video(video_id):
@@ -138,30 +137,3 @@ def get_all_user_relevant_playlist_info(username):
 
     return results
 
-
-def ensure_user_exists(username):
-    os.makedirs(USERS_DIR, exist_ok=True)
-    path = os.path.join(USERS_DIR, f"{username}.json")
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            json.dump({"username": username, "watched": {}}, f)
-
-
-def add_watched_times(username, video_id, watched_times):
-    path = os.path.join(USERS_DIR, f"{username}.json")
-    try:
-        with open(path) as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        data = {"username": username, "watched": {}}
-
-    data["watched"][video_id] = watched_times
-
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def ensure_directories():
-    os.makedirs(VIDEOS_DIR, exist_ok=True)
-    os.makedirs(PLAYLISTS_DIR, exist_ok=True)
-    os.makedirs(USERS_DIR, exist_ok=True)
