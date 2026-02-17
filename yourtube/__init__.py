@@ -4,7 +4,6 @@ import subprocess
 from pathlib import Path
 
 from yourtube.file_operations import (
-    graph_path_template,
     clustering_cache_template,
     saved_clusters_template,
     takeouts_template,
@@ -28,7 +27,6 @@ def run():
 
 def install():
     print("\n\nCreating necessary paths...")
-    Path(graph_path_template).parent.mkdir(parents=True, exist_ok=True)  # equivalent of mkdir -p
     Path(clustering_cache_template).parent.mkdir(parents=True, exist_ok=True)
     Path(saved_clusters_template).parent.parent.mkdir(parents=True, exist_ok=True)
     Path(takeouts_template).parent.mkdir(parents=True, exist_ok=True)

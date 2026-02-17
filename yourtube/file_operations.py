@@ -2,22 +2,19 @@ import csv
 import json
 import logging
 import os
-import pickle
 import re
 import zipfile
 import glob
-from time import mktime, time
+from datetime import datetime
 from pathlib import Path
 
 import networkx as nx
 import pickledb
-from dateutil import parser
 
 from yourtube.json_db import (
     get_all_user_relevant_playlist_info,
     get_limited_user_relevant_video_info,
 )
-from yourtube.config import Config
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
@@ -25,7 +22,6 @@ logger.setLevel(logging.DEBUG)
 id_to_url = "https://www.youtube.com/watch?v={}"
 
 data_path = os.path.expanduser("~/.yourtube/data")
-graph_path_template = os.path.join(data_path, "graph_cache", "{}.pickle")
 clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pickle")
 saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
 transcripts_path = os.path.join(data_path, "transcripts.json")
@@ -40,19 +36,10 @@ history_path_template = os.path.join(
 
 
 def load_graph(user):
-    # see if it's cached
-    graph_path = graph_path_template.format(user)
-    if os.path.isfile(graph_path):
-        time_modified = os.path.getmtime(graph_path)
-        if time() - time_modified < Config.graph_cache_time:
-            logger.info("using cached graph")
-            with open(graph_path, "rb") as handle:
-                return pickle.load(handle)
-
     # load info about which videos have been watched
-    id_to_watched_times = get_youtube_watched_ids(user)
+    id_to_watched_times = get_youtube_watched_ids(user)  # 400 ms
 
-    info = get_limited_user_relevant_video_info(user)
+    info = get_limited_user_relevant_video_info(user)  # 200 ms
     G = nx.DiGraph()
     for (
         v1_video_id,
@@ -93,7 +80,7 @@ def load_graph(user):
         G.add_node(v1_video_id, **params_dict_v1)
         G.add_node(v2_video_id, **params_dict_v2)
         G.add_edge(v1_video_id, v2_video_id)
-
+    
     playlist_info = get_all_user_relevant_playlist_info(user)
     for playlist_name, video_id, time_added in playlist_info:
         if video_id not in G.nodes:
@@ -102,12 +89,6 @@ def load_graph(user):
             continue
         G.nodes[video_id]["from"] = playlist_name
         G.nodes[video_id]["time_added"] = time_added
-
-    # cache graph, but only if it's not emply
-    if len(G.nodes) > 0:
-        with open(graph_path, "wb") as handle:
-            pickle.dump(G, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     return G
 
 
@@ -157,12 +138,16 @@ def get_freetube_favorites_ids():
 
 
 def timestamp_to_seconds(timestamp):
-    timelocal = parser.parse(timestamp)
-    unixtime = mktime(timelocal.utctimetuple())
-    # warning: mktime may be inaccurate up to a few hours because of timezones
-    # https://stackoverflow.com/a/7852891/11756613
+    # warning: may be inaccurate up to a few hours because of timezones
     # but here, few hours aren't a problem
-    return unixtime
+    try:
+        # ISO 8601 format from playlist CSVs: "2020-09-23T11:01:20+00:00"
+        return datetime.fromisoformat(timestamp).timestamp()
+    except ValueError:
+        # watch history format: "Aug 29, 2024, 10:17:01 AM CEST"
+        # strip the timezone abbreviation since strptime can't parse it
+        ts = timestamp.rsplit(" ", 1)[0]
+        return datetime.strptime(ts, "%b %d, %Y, %I:%M:%S %p").timestamp()
 
 
 def get_youtube_playlist_ids(playlist_name, username):

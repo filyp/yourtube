@@ -13,9 +13,6 @@ class Config:
     # when scraping periodically, skip videos which have been already scraped recently
     periodic_scraping_skip_if_fresher_than = seconds_in_day * 7
 
-    # to improve graph loading times, keep a cache of the graph loaded from neo4j, for this time:
-    graph_cache_time = seconds_in_day * 3
-
     # path to the JSON file database
     json_db_path = os.path.expanduser("~/.yourtube/json_db")
 
