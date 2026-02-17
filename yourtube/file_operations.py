@@ -1,7 +1,5 @@
-import glob
 import logging
-import os
-from time import time
+from pathlib import Path
 
 import networkx as nx
 
@@ -13,9 +11,17 @@ from yourtube.json_db import (
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
 
-data_path = os.path.expanduser("~/.yourtube/data")
-clustering_cache_template = os.path.join(data_path, "clustering_cache", "{}.pickle")
-saved_clusters_template = os.path.join(data_path, "saved_clusters", "{}", "{}")
+BASE_DIR = Path.home() / ".yourtube"
+CLUSTERING_CACHE_DIR = BASE_DIR / "clustering_cache"
+SAVED_CLUSTERS_DIR = BASE_DIR / "saved_clusters"
+
+
+def clustering_cache_path(unique_string):
+    return CLUSTERING_CACHE_DIR / f"{unique_string}.pickle"
+
+
+def saved_cluster_path(username, cluster_name):
+    return SAVED_CLUSTERS_DIR / username / cluster_name
 
 
 def load_graph():
@@ -48,24 +54,16 @@ def load_graph():
 
 
 def get_saved_clusters(username):
-    pattern = saved_clusters_template.format(username, "*")
     cluster_names = []
-    for abs_filename in glob.glob(pattern):
-        filename = os.path.split(abs_filename)[1]
-        cluster_name = filename.split(".")[0]
-        cluster_names.append(cluster_name)
+    for path in (SAVED_CLUSTERS_DIR / username).glob("*"):
+        cluster_names.append(path.stem)
 
     # get public clusters of other users
     # if a cluster name starts with _, it is private, so avoid it
-    pattern = saved_clusters_template.format("*", "[!_]*")
-    for abs_filename in glob.glob(pattern):
-        head, cluster_name = os.path.split(abs_filename)
-        current_username = os.path.split(head)[1]
-        if current_username == username:
-            # this user's cluster were already added previously
+    for path in SAVED_CLUSTERS_DIR.glob("*/[!_]*"):
+        if path.parent.name == username:
+            # this user's clusters were already added previously
             continue
-
-        cluster_name = current_username + "/" + cluster_name
-        cluster_names.append(cluster_name)
+        cluster_names.append(f"{path.parent.name}/{path.name}")
 
     return cluster_names

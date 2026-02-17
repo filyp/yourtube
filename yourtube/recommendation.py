@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import os
 import pickle
 from pathlib import Path
 from threading import Thread
@@ -12,8 +11,7 @@ from krakow import krakow
 from krakow.utils import create_dendrogram, split_into_n_children, normalized_dasgupta_cost
 from scipy.cluster.hierarchy import to_tree
 
-from yourtube.file_operations import clustering_cache_template, saved_clusters_template
-from yourtube.filtering_functions import select_nodes_to_cluster
+from yourtube.file_operations import clustering_cache_path, saved_cluster_path
 from yourtube.scraping import Scraper
 
 logger = logging.getLogger("yourtube")
@@ -31,9 +29,8 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
     unique_string = "".join(sorted_nodes)
     node_hash = hashlib.md5(unique_string.encode()).hexdigest()
     unique_string = f"{balance_alpha:.2f}_{balance_beta:.2f}_{node_hash}"
-    Path(clustering_cache_template).parent.mkdir(parents=True, exist_ok=True)
-    cache_file = clustering_cache_template.format(unique_string)
-    if os.path.isfile(cache_file):
+    cache_file = clustering_cache_path(unique_string)
+    if cache_file.is_file():
         logger.info(f"using cached clustering: {cache_file}")
         start_time = time()
         with open(cache_file, "rb") as handle:
@@ -72,6 +69,8 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
     else:
         img = None
 
+    # ensure directory exists
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
     # save to cache
     with open(cache_file, "wb") as handle:
         pickle.dump((tree, img, clustering_quality), handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -255,9 +254,7 @@ class Engine:
             self.message_callback("you must enter some name for this cluster, before saving it")
             return
 
-        path = saved_clusters_template.format(self.user, cluster_name)
-        # make sure user directory exists
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        path = saved_cluster_path(self.user, cluster_name)
 
         data_to_save = (
             self.tree_climber.tree,
@@ -265,6 +262,8 @@ class Engine:
             self.G,
         )
 
+        # make sure user directory exists
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         # save cluster
         with open(path, "wb") as handle:
             pickle.dump(data_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -282,7 +281,7 @@ class Engine:
         else:
             username = self.user
 
-        path = saved_clusters_template.format(username, cluster_name)
+        path = saved_cluster_path(username, cluster_name)
         with open(path, "rb") as handle:
             tree, node_ranks, graph = pickle.load(handle)
         self.tree_climber.reset(tree)
@@ -341,3 +340,23 @@ class Engine:
             skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
             non_verbose=True,
         )
+
+
+
+def _not_down(G, ids):
+    for id_ in ids:
+        node = G.nodes[id_]
+        if not node.get("is_down"):
+            yield id_
+
+
+def _get_neighborhood(G, ids):
+    out_edges = G.out_edges(ids)
+    return G.edge_subgraph(out_edges).nodes
+
+
+def select_nodes_to_cluster(G):
+    # todo, simplify this
+    sources = list(G.nodes)
+    sources = _not_down(G, sources)
+    return list(_get_neighborhood(G, sources))
