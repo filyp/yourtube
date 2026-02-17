@@ -43,9 +43,6 @@ def load_graph():
         node["view_count"] = entry.get("view_count")
         node["channel"] = entry.get("channel")
         node["duration"] = entry.get("duration")
-        # yt-dlp doesn't provide when a video was added to the playlist,
-        # so use current time (all fetched entries are "current")
-        node["time_added"] = time()
 
     return G
 

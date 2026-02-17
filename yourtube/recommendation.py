@@ -1,4 +1,3 @@
-import glob
 import hashlib
 import logging
 import os
@@ -14,7 +13,7 @@ from krakow.utils import create_dendrogram, split_into_n_children, normalized_da
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import clustering_cache_template, saved_clusters_template
-from yourtube.filtering_functions import added_in_last_n_years, select_nodes_to_cluster
+from yourtube.filtering_functions import select_nodes_to_cluster
 from yourtube.scraping import Scraper
 
 logger = logging.getLogger("yourtube")
@@ -99,7 +98,7 @@ class Recommender:
     def compute_node_ranks(self, ids):
         """This function must be called on given ids before we can use recommender on those ids."""
 
-        source_videos = added_in_last_n_years(self.G, ids)
+        source_videos = ids
         # note: these may not really be source videos!
 
         # compute node ranks
