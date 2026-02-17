@@ -59,7 +59,7 @@ You can also browse clusters that the other users saved.
 ```bash
 git clone https://github.com/filyp/yourtube.git
 cd yourtube
-python -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 yourtube-install
