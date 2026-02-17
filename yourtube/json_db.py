@@ -1,16 +1,13 @@
 import json
-import os
 from pathlib import Path
 import time
 
-import logging
-
-VIDEOS_DIR = os.path.expanduser("~/.yourtube/videos")
-PLAYLISTS_DIR = os.path.expanduser("~/.yourtube/playlists")
+VIDEOS_DIR = Path.home() / ".yourtube/videos"
+PLAYLISTS_DIR = Path.home() / ".yourtube/playlists"
 
 
 def read_video(video_id):
-    path = os.path.join(VIDEOS_DIR, f"{video_id}.json")
+    path = VIDEOS_DIR / f"{video_id}.json"
     try:
         with open(path) as f:
             return json.load(f)
@@ -24,22 +21,20 @@ def update_video(video_id, recommendations, is_down=False):
         "time_scraped": time.time(),
         "is_down": is_down,
     }
-    Path(VIDEOS_DIR).mkdir(parents=True, exist_ok=True)
-    path = os.path.join(VIDEOS_DIR, f"{video_id}.json")
+    VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
+    path = VIDEOS_DIR / f"{video_id}.json"
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
 
 
 def get_playlist_video_ids():
     """Read all playlist JSONs and return the set of video IDs."""
-    if not os.path.isdir(PLAYLISTS_DIR):
+    if not PLAYLISTS_DIR.is_dir():
         return set()
 
     video_ids = set()
-    for filename in os.listdir(PLAYLISTS_DIR):
-        if not filename.endswith(".json"):
-            continue
-        with open(os.path.join(PLAYLISTS_DIR, filename)) as f:
+    for path in PLAYLISTS_DIR.glob("*.json"):
+        with open(path) as f:
             playlist = json.load(f)
         for entry in playlist.get("entries", []):
             if entry and entry.get("id"):
@@ -49,15 +44,13 @@ def get_playlist_video_ids():
 
 def get_playlist_entries():
     """Returns list of (playlist_name, video_id, entry_data) tuples from all playlist JSONs."""
-    if not os.path.isdir(PLAYLISTS_DIR):
+    if not PLAYLISTS_DIR.is_dir():
         return []
 
     results = []
-    for filename in os.listdir(PLAYLISTS_DIR):
-        if not filename.endswith(".json"):
-            continue
-        playlist_name = filename[:-5]  # strip .json
-        with open(os.path.join(PLAYLISTS_DIR, filename)) as f:
+    for path in PLAYLISTS_DIR.glob("*.json"):
+        playlist_name = path.stem
+        with open(path) as f:
             playlist = json.load(f)
         for entry in playlist.get("entries", []):
             if entry and entry.get("id"):

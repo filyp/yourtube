@@ -21,8 +21,8 @@ def clustering_cache_path(unique_string):
     return CLUSTERING_CACHE_DIR / f"{unique_string}.pickle"
 
 
-def saved_cluster_path(username, cluster_name):
-    return SAVED_CLUSTERS_DIR / username / cluster_name
+def saved_cluster_path(cluster_name):
+    return SAVED_CLUSTERS_DIR / cluster_name
 
 
 def load_graph():
@@ -57,17 +57,8 @@ def load_graph():
     return G
 
 
-def get_saved_clusters(username):
+def get_saved_clusters():
     cluster_names = []
-    for path in (SAVED_CLUSTERS_DIR / username).glob("*"):
+    for path in SAVED_CLUSTERS_DIR.glob("*"):
         cluster_names.append(path.stem)
-
-    # get public clusters of other users
-    # if a cluster name starts with _, it is private, so avoid it
-    for path in SAVED_CLUSTERS_DIR.glob("*/[!_]*"):
-        if path.parent.name == username:
-            # this user's clusters were already added previously
-            continue
-        cluster_names.append(f"{path.parent.name}/{path.name}")
-
     return cluster_names

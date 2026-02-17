@@ -209,7 +209,6 @@ class TreeClimber:
 class Engine:
     def __init__(self, G, parameters):
         self.G = G
-        self.user = parameters.username
         self.display_callback = lambda: None
         self.message_callback = lambda msg: None
 
@@ -260,7 +259,7 @@ class Engine:
             )
             return
 
-        path = saved_cluster_path(self.user, cluster_name)
+        path = saved_cluster_path(cluster_name)
 
         data_to_save = (
             self.tree_climber.tree,
@@ -268,7 +267,7 @@ class Engine:
             self.G,
         )
 
-        # make sure user directory exists
+        # make sure directory exists
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         # save cluster
         with open(path, "wb") as handle:
@@ -277,17 +276,7 @@ class Engine:
         self.message_callback("cluster saved successfully")
 
     def load_cluster(self, cluster_name):
-        # allow loading other users' cluster of the format: username/cluster_name
-        # keep possible to load this user cluster of the format: cluster_name
-        cluster_name_parts = cluster_name.split("/")
-        cluster_name = cluster_name_parts[-1]
-        if len(cluster_name_parts) == 2:
-            username = cluster_name_parts[0]
-            # we also need to load a new graph!
-        else:
-            username = self.user
-
-        path = saved_cluster_path(username, cluster_name)
+        path = saved_cluster_path(cluster_name)
         with open(path, "rb") as handle:
             tree, node_ranks, graph = pickle.load(handle)
         self.tree_climber.reset(tree)

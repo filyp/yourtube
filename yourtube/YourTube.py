@@ -90,7 +90,7 @@ class UI:
         save_cluster_button.on_click = self.save_current_cluster
 
         self.saved_cluster_selector = pn.widgets.Select(
-            name="Saved clusters", options=get_saved_clusters(parameters.username)
+            name="Saved clusters", options=get_saved_clusters()
         )
         load_cluster_button = MaterialButton(
             label="Load cluster",
@@ -222,11 +222,9 @@ class Parameters(param.Parameterized):
     videos_in_group = param.Integer(5, bounds=(1, 10), step=1)
     show_dendrogram = param.Boolean(False)
     column_width = param.Integer(260, bounds=(100, 500), step=10)
-    username = param.String(default="default")
 
 
 parameters = Parameters(seed=random.randint(1, 9999))
-# pn.state.location.sync(parameters, ["username"])
 
 
 # # only sane templates are FastListTemplate and VanillaTemplate and MaterialTemplate
@@ -247,7 +245,7 @@ def refresh(_event):
     logger.info(f"loading graph took: {time() - start_time:.3f} seconds")
     logger.info(f"graph size: {len(G.nodes)}")
     if len(G.nodes) == 0:
-        logger.error(f"user: {parameters.username}, tried to load an empty graph")
+        logger.error("tried to load an empty graph")
         template.main[0][0] = pn.pane.Markdown("Nothing to show :(")
         return
 
