@@ -4,8 +4,9 @@ from pathlib import Path
 import networkx as nx
 
 from yourtube.json_db import (
-    get_video_recommendations,
+    get_playlist_video_ids,
     get_playlist_entries,
+    read_video,
 )
 
 logger = logging.getLogger("yourtube")
@@ -28,16 +29,19 @@ def load_graph():
     G = nx.DiGraph()
 
     # add edges from video recommendations
-    for v1_id, v1_is_down, v2_id, v2_is_down in get_video_recommendations():
-        if v1_is_down:
-            G.add_node(v1_id, is_down=True)
+    for v1_id in get_playlist_video_ids():
+        v1 = read_video(v1_id)
+        if v1 is None or v1["is_down"]:
             continue
         G.add_node(v1_id)
-        if v2_is_down:
-            G.add_node(v2_id, is_down=True)
-        else:
+
+        for v2_id in v1["recommendations"]:
+            v2 = read_video(v2_id)
+            if v2 is not None and not v2["is_down"]:
+                # we already know we should skip it
+                continue
             G.add_node(v2_id)
-        G.add_edge(v1_id, v2_id)
+            G.add_edge(v1_id, v2_id)
 
     # add playlist metadata from yt-dlp playlist entries
     for playlist_name, video_id, entry in get_playlist_entries():

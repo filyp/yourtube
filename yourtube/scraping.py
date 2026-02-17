@@ -1,21 +1,21 @@
 import logging
 import re
+import time
 from concurrent.futures import (
     CancelledError,
     ProcessPoolExecutor,
     as_completed,
 )
-from time import time
 
 import numpy as np
 import requests
 from tqdm import tqdm
+
 # from youtube_transcript_api import (
 #     NoTranscriptFound,
 #     TranscriptsDisabled,
 #     YouTubeTranscriptApi,
 # )
-
 from yourtube.json_db import get_playlist_video_ids, read_video, update_video
 
 logger = logging.getLogger("yourtube")
@@ -35,25 +35,16 @@ def get_recommended_ids(content, id_):
     return recs
 
 
-def scrape_content(content, id_, G=None):
+def scrape_content(content, id_):
     """
     if G is not None, also update the in-memory graph G
     """
-    recs = get_recommended_ids(content, id_)
-    if len(recs) <= 1:
+    recommendations = get_recommended_ids(content, id_)
+    if len(recommendations) <= 1:
         # this video is probably removed from youtube
-        update_video(id_, [], time(), is_down=True)
-        if G is not None:
-            G.add_node(id_)
-            G.nodes[id_]["is_down"] = True
-        return
-
-    update_video(id_, recs, time())
-    if G is not None:
-        logging.debug(f"adding node : {id_}")
-        G.add_node(id_, time_scraped=time())
-        for rec in recs:
-            G.add_edge(id_, rec)
+        update_video(id_, recommendations=[], is_down=True)
+    else:
+        update_video(id_, recommendations=recommendations)
 
 
 def get_title_oembed(video_id):
@@ -87,7 +78,7 @@ class Scraper:
                 # down videos should be skipped
                 continue
 
-            if time() - data["time_scraped"] > skip_if_fresher_than:
+            if time.time() - data["time_scraped"] > skip_if_fresher_than:
                 # it was scraped, but long ago, so scrape it
                 ids_to_scrape.append(id_)
 
@@ -128,7 +119,7 @@ class Scraper:
         ):
             try:
                 content, id_ = future.result()
-                scrape_content(content, id_, self.G)
+                scrape_content(content, id_)
             except CancelledError:
                 pass
             except Exception as ex:

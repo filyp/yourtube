@@ -4,7 +4,6 @@ import random
 from time import time
 
 import matplotlib.pyplot as plt
-import numpy as np
 import panel as pn
 import param
 
@@ -166,29 +165,10 @@ class UI:
 
     def display_video_grid(self):
         ids = self.engine.get_video_ids(self.get_recommendation_parameters())
-        ids = np.array(ids).flatten()
+        ids = [id_ for row in ids for id_ in row]
 
-        texts = []
-        for i, id_ in enumerate(ids):
-            if id_ == "" or self.engine.is_video_down(id_):
-                # it's "" if its cluster turned out empty after filtering
-                # it can also be down
-                ids[i] = "RqJVa0fl01w"  # confused Travolta
-                texts.append("-")
-                continue
-            # logger.debug(id_)
-            title = self.engine.get_video_title(id_)
-            # TODO refine and show video info
-            # rank = self.recommender.node_ranks.get(id_)
-            # likes_to_views = liked_to_views_ratio(self.G, id_)
-            # likes_to_views = int(likes_to_views * 1000)
-            # info = f"rank: {rank}   l/v: {likes_to_views}"
-            # text = f"{info}<br>{title}"
-            text = title
-            texts.append(text)
-
-        self.video_wall.ids = list(ids)
-        self.video_wall.texts = texts
+        self.video_wall.ids = ids
+        self.video_wall.texts = [self.engine.get_video_title(id_) for id_ in ids]
         self.video_wall.update()
 
     def choose_column(self, _change, i):

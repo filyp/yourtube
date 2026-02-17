@@ -248,9 +248,6 @@ class Engine:
     def get_branch_id(self):
         return self.tree_climber.branch_id
 
-    def is_video_down(self, video_id):
-        return self.G.nodes[video_id].get("is_down", False)
-
     def get_video_title(self, video_id):
         return self.G.nodes[video_id].get("title", "")
 
@@ -321,20 +318,8 @@ class Engine:
         self.display_callback()
 
 
-def _not_down(G, ids):
-    for id_ in ids:
-        node = G.nodes[id_]
-        if not node.get("is_down"):
-            yield id_
-
-
-def _get_neighborhood(G, ids):
-    out_edges = G.out_edges(ids)
-    return G.edge_subgraph(out_edges).nodes
-
-
 def select_nodes_to_cluster(G):
-    # todo, simplify this
     sources = list(G.nodes)
-    sources = _not_down(G, sources)
-    return list(_get_neighborhood(G, sources))
+    out_edges = G.out_edges(sources)
+    return list(G.edge_subgraph(out_edges).nodes)
+
