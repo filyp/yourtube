@@ -6,7 +6,7 @@ VIDEOS_DIR = os.path.expanduser("~/.yourtube/videos")
 PLAYLISTS_DIR = os.path.expanduser("~/.yourtube/playlists")
 
 
-def _read_video(video_id):
+def read_video(video_id):
     path = os.path.join(VIDEOS_DIR, f"{video_id}.json")
     try:
         with open(path) as f:
@@ -25,13 +25,6 @@ def update_video(video_id, recommendations, time_scraped, is_down=False):
     path = os.path.join(VIDEOS_DIR, f"{video_id}.json")
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
-
-
-def check_if_this_video_was_scraped(video_id):
-    data = _read_video(video_id)
-    if data is None:
-        return []
-    return [(data.get("time_scraped"), data.get("is_down", False))]
 
 
 def get_playlist_video_ids():
@@ -59,11 +52,11 @@ def get_video_recommendations():
 
     results = []
     for v1_id in video_ids:
-        v1 = _read_video(v1_id)
+        v1 = read_video(v1_id)
         if v1 is None:
             continue
         for v2_id in v1.get("recommendations", []):
-            v2 = _read_video(v2_id)
+            v2 = read_video(v2_id)
             results.append((
                 v1_id, v1.get("is_down"),
                 v2_id, v2.get("is_down") if v2 else None,

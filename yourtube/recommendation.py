@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import logging
 import pickle
@@ -8,17 +9,23 @@ from time import time
 import networkx as nx
 import numpy as np
 from krakow import krakow
-from krakow.utils import create_dendrogram, split_into_n_children, normalized_dasgupta_cost
+from krakow.utils import (
+    create_dendrogram,
+    split_into_n_children,
+    normalized_dasgupta_cost,
+)
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import clustering_cache_path, saved_cluster_path
-from yourtube.scraping import Scraper
+from yourtube.scraping import get_title_oembed
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
 
 
-def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, create_image=True):
+def cluster_subgraph(
+    nodes_to_cluster, G, balance_alpha=2, balance_beta=2, create_image=True
+):
     # note that using create_image=False opens the possibility, that the cached image will be None
     # so watchout for that
 
@@ -73,7 +80,9 @@ def cluster_subgraph(nodes_to_cluster, G, balance_alpha=2, balance_beta=2, creat
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     # save to cache
     with open(cache_file, "wb") as handle:
-        pickle.dump((tree, img, clustering_quality), handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(
+            (tree, img, clustering_quality), handle, protocol=pickle.HIGHEST_PROTOCOL
+        )
     return tree, img, clustering_quality
 
 
@@ -191,7 +200,8 @@ class TreeClimber:
     def new_offspring(self, new_tree):
         new_children = split_into_n_children(new_tree, n=self.num_of_groups)
         new_grandchildren = [
-            split_into_n_children(new_child, n=self.videos_in_group) for new_child in new_children
+            split_into_n_children(new_child, n=self.videos_in_group)
+            for new_child in new_children
         ]
         return new_children, new_grandchildren
 
@@ -208,9 +218,6 @@ class Engine:
 
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         self.recommender = Recommender(G, parameters.seed)
-
-        self.scraping_thread = Thread()
-        self.scraper = Scraper(G=G)
 
         nodes_to_cluster = select_nodes_to_cluster(self.G)
         self._nodes = nodes_to_cluster
@@ -251,7 +258,9 @@ class Engine:
         # sanitize cluster name
         cluster_name = cluster_name.replace("/", "-")
         if cluster_name == "":
-            self.message_callback("you must enter some name for this cluster, before saving it")
+            self.message_callback(
+                "you must enter some name for this cluster, before saving it"
+            )
             return
 
         path = saved_cluster_path(self.user, cluster_name)
@@ -287,60 +296,29 @@ class Engine:
         self.tree_climber.reset(tree)
         self.recommender.node_ranks = node_ranks
         self.G = graph
-        self.scraper.G = graph
         self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):
-        # threading is needed, because panel updates its widgets only when the main thread is idle
-        self.scraping_thread = Thread(
-            target=self.fetch_videos_background, args=[recommendation_parameters]
-        )
-        self.scraping_thread.start()
-
-    def fetch_videos_background(self, recommendation_parameters):
         ids = self.get_video_ids(recommendation_parameters)
+        flat_ids = [id_ for row in ids for id_ in row]
 
-        # if some videos are scraped in the background, cancell them
-        self.scraper.cancel_all_tasks()
+        # scrape titles
+        to_scrape = [id_ for id_ in flat_ids if not self.G.nodes[id_].get("title")]
 
-        # scrape current videos
-        self.scraper.scrape_from_list(
-            ids,
-            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
-            non_verbose=True,
-        )
-        # display current videos
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_id = {
+                executor.submit(get_title_oembed, vid): vid for vid in to_scrape
+            }
+            for future in as_completed(future_to_id):
+                vid = future_to_id[future]
+                try:
+                    title = future.result()
+                    self.G.nodes[vid]["title"] = title
+                except Exception as e:
+                    pass
+                    # print(f"Failed to get title for {vid}: {e}")
+
         self.display_callback()
-
-        if len(self.scraper.futures) != 0:
-            # some other thread already started scraping,
-            # so skip scraping of the potential videos below, because it's low priority
-            return
-
-        # find potential videos
-        self.potential_ids_to_show = []
-        for i in range(self.num_of_groups):
-            potential_tree = self.tree_climber.children[i]
-            try:
-                _, potential_grandchildren = self.tree_climber.new_offspring(potential_tree)
-            except ValueError:
-                empty_wall = np.full((self.num_of_groups, self.videos_in_group), "")
-                self.potential_ids_to_show.append(empty_wall)
-                continue
-
-            # potential_granchildren has a dimension: (num_of_groups, videos_in_group)
-            ids_to_show_in_wall = self.recommender.build_wall(
-                potential_grandchildren, recommendation_parameters
-            )
-            self.potential_ids_to_show.append(ids_to_show_in_wall)
-
-        # scrape potential videos in advance
-        self.scraper.scrape_from_list(
-            self.potential_ids_to_show,
-            skip_if_fresher_than=float("inf"),  # skip if already scraped anytime
-            non_verbose=True,
-        )
-
 
 
 def _not_down(G, ids):
