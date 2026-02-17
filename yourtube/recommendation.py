@@ -3,7 +3,6 @@ import hashlib
 import logging
 import pickle
 from pathlib import Path
-from threading import Thread
 from time import time
 
 import networkx as nx
@@ -59,7 +58,8 @@ def cluster_subgraph(
 
     D = krakow(Main, alpha=balance_alpha, beta=balance_beta)
     tree = to_tree(D)
-    clustering_quality = 1 - normalized_dasgupta_cost(Main, D)
+    # clustering_quality = 1 - normalized_dasgupta_cost(Main, D)
+    clustering_quality = None  # save 10% computation time
 
     # convert leaf values to original ids
     main_ids_list = np.array(Main.nodes)
@@ -209,9 +209,6 @@ class TreeClimber:
 class Engine:
     def __init__(self, G, parameters):
         self.G = G
-        self.display_callback = lambda: None
-        self.message_callback = lambda msg: None
-
         self.num_of_groups = parameters.num_of_groups
         self.videos_in_group = parameters.videos_in_group
 
@@ -254,10 +251,7 @@ class Engine:
         # sanitize cluster name
         cluster_name = cluster_name.replace("/", "-")
         if cluster_name == "":
-            self.message_callback(
-                "you must enter some name for this cluster, before saving it"
-            )
-            return
+            return "you must enter some name for this cluster, before saving it"
 
         path = saved_cluster_path(cluster_name)
 
@@ -273,7 +267,7 @@ class Engine:
         with open(path, "wb") as handle:
             pickle.dump(data_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        self.message_callback("cluster saved successfully")
+        return "cluster saved successfully"
 
     def load_cluster(self, cluster_name):
         path = saved_cluster_path(cluster_name)
@@ -282,7 +276,6 @@ class Engine:
         self.tree_climber.reset(tree)
         self.recommender.node_ranks = node_ranks
         self.G = graph
-        self.display_callback()
 
     def fetch_videos(self, recommendation_parameters):
         ids = self.get_video_ids(recommendation_parameters)
@@ -302,9 +295,6 @@ class Engine:
                     self.G.nodes[vid]["title"] = title
                 except Exception as e:
                     pass
-                    # print(f"Failed to get title for {vid}: {e}")
-
-        self.display_callback()
 
 
 def select_nodes_to_cluster(G):

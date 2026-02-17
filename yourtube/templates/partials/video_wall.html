@@ -1,0 +1,35 @@
+<div id="video-wall">
+    {% if message %}
+    <div id="message" hx-swap-oob="innerHTML">{{ message }}</div>
+    {% endif %}
+
+    {% if video_data %}
+    <div class="wall-layout">
+        <div class="group-buttons" style="grid-template-rows: repeat({{ children_sizes|length }}, {{ row_height | int }}px); gap: {{ grid_gap }}px;">
+            {% for size in children_sizes %}
+            <button class="group-btn"
+                    hx-post="/choose-column/{{ loop.index0 }}"
+                    hx-target="#video-wall"
+                    hx-swap="outerHTML"
+                    style="height: {{ button_height }}px;">
+                {{ size }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="video-grid" style="grid-template-columns: repeat({{ videos_in_group }}, {{ column_width }}px); gap: {{ grid_gap }}px;">
+            {% for video in videos_flat %}
+            <div class="video-card" style="height: {{ row_height | int }}px;">
+                <a href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank">
+                    <img src="https://i.ytimg.com/vi/{{ video.id }}/mqdefault.jpg">
+                </a>
+                <a href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank"
+                   {% if not video.title %}hx-get="/title/{{ video.id }}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{{ video.title }}</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <p>Nothing to show :(</p>
+    {% endif %}
+</div>

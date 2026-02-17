@@ -1,0 +1,138 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #121212;
+    color: #e0e0e0;
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+aside {
+    width: 260px;
+    min-width: 260px;
+    background: #1e1e1e;
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 1px solid #333;
+}
+
+aside h2 { margin-bottom: 20px; color: #fff; }
+
+aside label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+aside input[type="range"] { width: 110px; accent-color: #bb86fc; }
+aside input[type="number"] { width: 70px; background: #2a2a2a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; padding: 4px; }
+aside input[type="checkbox"] { accent-color: #bb86fc; }
+
+/* Main */
+main {
+    flex: 1;
+    padding: 16px 24px;
+    overflow-y: auto;
+}
+
+/* Toolbar */
+#toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+#toolbar input[type="range"] { width: 140px; accent-color: #bb86fc; }
+#toolbar input[type="text"] {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px 10px;
+}
+
+#toolbar select {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+/* Buttons */
+button, .btn {
+    background: #bb86fc;
+    color: #121212;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+button:hover { background: #ce9ffc; }
+button:active { background: #a66ef0; }
+
+/* Group buttons */
+.group-btn {
+    width: 60px;
+    display: block;
+    font-size: 14px;
+}
+
+/* Message */
+#message {
+    min-height: 20px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #aaa;
+}
+
+/* Wall layout */
+.wall-layout {
+    display: flex;
+    gap: 12px;
+}
+
+.group-buttons {
+    display: grid;
+    align-items: start;
+}
+
+/* Video grid */
+.video-grid {
+    display: grid;
+}
+
+.video-card a {
+    text-decoration: none;
+    color: #eee;
+    font-size: 20px;
+    line-height: 1.3;
+}
+
+.video-card img {
+    width: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Dendrogram */
+#dendrogram {
+    max-width: 100%;
+    margin-bottom: 12px;
+}
+
+/* Separator between toolbar groups */
+.sep { width: 1px; height: 28px; background: #444; }
+
+/* Range value display */
+.range-val { font-size: 12px; color: #999; min-width: 30px; text-align: right; }
