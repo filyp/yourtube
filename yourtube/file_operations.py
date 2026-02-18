@@ -59,5 +59,7 @@ def load_graph():
 def get_saved_clusters():
     cluster_names = []
     for path in SAVED_CLUSTERS_DIR.glob("*"):
+        if path.name.startswith("."):
+            continue
         cluster_names.append(path.stem)
     return cluster_names

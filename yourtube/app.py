@@ -36,7 +36,7 @@ class AppState:
     message: str = ""
     num_of_groups: int = 3
     videos_in_group: int = 5
-    column_width: int = 390
+    column_width: int = 230
     selected_playlist: str = ""
     playlist_range: tuple = (0.0, 1.0)
 
@@ -118,6 +118,14 @@ def wall_response(request):
 @app.on_event("startup")
 def startup():
     build_engine()
+
+
+@app.post("/reset", response_class=HTMLResponse)
+def reset(request: Request):
+    global state
+    state = AppState()
+    build_engine()
+    return templates.TemplateResponse("index.html", full_context(request))
 
 
 @app.get("/", response_class=HTMLResponse)

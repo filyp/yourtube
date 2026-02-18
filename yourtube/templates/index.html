@@ -9,27 +9,32 @@
 <body>
     <aside>
         <h2>YourTube</h2>
-        <label>Groups
-            <input type="range" name="num_of_groups" value="{{ state.num_of_groups }}" min="2" max="10" step="1"
-                   hx-post="/update-num-of-groups" hx-target="#video-wall" hx-swap="outerHTML"
-                   hx-trigger="change" hx-include="this"
-                   oninput="this.nextElementSibling.textContent = this.value">
+        <div class="range-slider-label">
+            <span>Groups</span>
             <span class="range-val">{{ state.num_of_groups }}</span>
-        </label>
-        <label>Videos/group
-            <input type="range" name="videos_in_group" value="{{ state.videos_in_group }}" min="1" max="10" step="1"
-                   hx-post="/update-videos-in-group" hx-target="#video-wall" hx-swap="outerHTML"
-                   hx-trigger="change" hx-include="this"
-                   oninput="this.nextElementSibling.textContent = this.value">
+        </div>
+        <input type="range" name="num_of_groups" value="{{ state.num_of_groups }}" min="2" max="10" step="1"
+               hx-post="/update-num-of-groups" hx-target="#video-wall" hx-swap="outerHTML"
+               hx-trigger="change" hx-include="this"
+               oninput="this.previousElementSibling.querySelector('.range-val').textContent = this.value">
+
+        <div class="range-slider-label">
+            <span>Videos/group</span>
             <span class="range-val">{{ state.videos_in_group }}</span>
-        </label>
-        <label>Column width
-            <input type="range" name="column_width" value="{{ state.column_width }}" min="100" max="500" step="10"
-                   hx-post="/update-column-width" hx-target="#video-wall" hx-swap="outerHTML"
-                   hx-trigger="change" hx-include="this"
-                   oninput="this.nextElementSibling.textContent = this.value">
+        </div>
+        <input type="range" name="videos_in_group" value="{{ state.videos_in_group }}" min="1" max="10" step="1"
+               hx-post="/update-videos-in-group" hx-target="#video-wall" hx-swap="outerHTML"
+               hx-trigger="change" hx-include="this"
+               oninput="this.previousElementSibling.querySelector('.range-val').textContent = this.value">
+
+        <div class="range-slider-label">
+            <span>Column width</span>
             <span class="range-val">{{ state.column_width }}</span>
-        </label>
+        </div>
+        <input type="range" name="column_width" value="{{ state.column_width }}" min="100" max="500" step="10"
+               hx-post="/update-column-width" hx-target="#video-wall" hx-swap="outerHTML"
+               hx-trigger="change" hx-include="this"
+               oninput="this.previousElementSibling.querySelector('.range-val').textContent = this.value">
         {% if playlists %}
         <div class="sidebar-label">Rank by playlist</div>
         <select name="rank_playlist" class="sidebar-select"
@@ -96,6 +101,11 @@
             </select>
             <button hx-post="/load-cluster" hx-target="#video-wall" hx-swap="outerHTML"
                     hx-include="[name='saved_cluster']">Load</button>
+
+            <div class="sep"></div>
+
+            <button hx-post="/reset" hx-target="body" hx-swap="innerHTML"
+                    onclick="document.getElementById('message').textContent = 'Resetting...'">Reset</button>
         </div>
 
         <div id="message">{{ message }}</div>
