@@ -6,13 +6,10 @@ from time import time
 
 import networkx as nx
 import numpy as np
-# from krakow import krakow
+
+from krakow import reorder_dendrogram
 from yourtube.optimized_krakow import krakow
-from krakow.utils import (
-    create_dendrogram,
-    split_into_n_children,
-    normalized_dasgupta_cost,
-)
+from krakow.utils import create_dendrogram, split_into_n_children
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import load_graph, saved_cluster_path
@@ -26,7 +23,7 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
-def cluster_graph(G, balance_alpha=2, balance_beta=2, create_image=True):
+def cluster_graph(G, balance_alpha=2, create_image=True):
     # note that using create_image=False opens the possibility, that the cached image will be None
     # so watchout for that
 
@@ -45,9 +42,9 @@ def cluster_graph(G, balance_alpha=2, balance_beta=2, create_image=True):
     ]
 
     D = krakow(len(main_component_nodes), edges, alpha=balance_alpha)
+    D = reorder_dendrogram(np.array(D))
     tree = to_tree(D)
     # clustering_quality = 1 - normalized_dasgupta_cost(Main, D)
-    clustering_quality = None  # save 10% computation time
 
     # convert leaf values back to original video ids
     def substitute_video_id(leaf):
@@ -64,7 +61,7 @@ def cluster_graph(G, balance_alpha=2, balance_beta=2, create_image=True):
     else:
         img = None
 
-    return tree, img, clustering_quality
+    return tree, img
 
 
 # ranking functions
@@ -199,10 +196,9 @@ class Engine:
         # nodes_to_cluster = {n for n, deg in self.G.degree() if deg >= 2}
         nodes_to_cluster = self.G.nodes
 
-        tree, self.dendrogram_img, clustering_quality = cluster_graph(
+        tree, self.dendrogram_img = cluster_graph(
             self.G.subgraph(nodes_to_cluster),
             parameters.clustering_balance_a,
-            parameters.clustering_balance_b,
         )
         video_ids = tree.pre_order()
         self.recommender.compute_node_ranks(video_ids)

@@ -15,6 +15,10 @@ def read_video(video_id):
         return None
 
 
+def all_video_ids():
+    return (path.stem for path in VIDEOS_DIR.glob("*.json"))
+
+
 def update_video(video_id, recommendations, is_down=False):
     data = {
         "recommendations": recommendations,

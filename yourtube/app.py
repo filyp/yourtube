@@ -36,7 +36,6 @@ class AppState:
     message: str = ""
     seed: int = field(default_factory=lambda: random.randint(1, 9999))
     clustering_balance_a: float = 1.7
-    clustering_balance_b: float = 1.0
     num_of_groups: int = 3
     videos_in_group: int = 5
     show_dendrogram: bool = False
@@ -53,7 +52,6 @@ def build_engine():
     params = SimpleNamespace(
         seed=state.seed,
         clustering_balance_a=state.clustering_balance_a,
-        clustering_balance_b=state.clustering_balance_b,
         num_of_groups=state.num_of_groups,
         videos_in_group=state.videos_in_group,
     )
@@ -131,7 +129,6 @@ def refresh_engine(
     request: Request,
     seed: int = Form(...),
     clustering_balance_a: float = Form(...),
-    clustering_balance_b: float = Form(...),
     num_of_groups: int = Form(...),
     videos_in_group: int = Form(...),
     show_dendrogram: bool = Form(False),
@@ -139,7 +136,6 @@ def refresh_engine(
 ):
     state.seed = seed
     state.clustering_balance_a = clustering_balance_a
-    state.clustering_balance_b = clustering_balance_b
     state.num_of_groups = num_of_groups
     state.videos_in_group = videos_in_group
     state.show_dendrogram = show_dendrogram

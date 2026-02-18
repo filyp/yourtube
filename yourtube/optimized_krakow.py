@@ -1,5 +1,3 @@
-__version__ = '0.2.1'
-
 #
 #    Copyright (C) 2018 by
 #    Thomas Bonald <thomas.bonald@telecom-paristech.fr>
@@ -11,25 +9,23 @@ __version__ = '0.2.1'
 #    theory: https://arxiv.org/pdf/1806.01664.pdf
 #    this is a slighly modified version of paris, dubbed "krakow"
 
-import numpy as np
-
 
 # @profile
 def krakow(n_nodes, edges, alpha=2):
     """
     Hierarchical clustering using nearest-neighbor chain algorithm.
-    
+
     alpha should be >= 1
     at alpha==1, the algorithm is the same as paris
     the higher the parameter, the more even the merges
     but too high values can harm clustering quality
-    
+
     n_nodes: number of nodes (nodes are labeled 0 to n_nodes-1)
     edges: list of (u, v) tuples with integer node labels 0 to n_nodes-1
     alpha: balance parameter (beta is fixed at 1)
     """
     assert alpha >= 1
-    
+
     n = n_nodes
     F = {node: {} for node in range(n)}
     w = [0.0] * (2 * n - 1)
@@ -66,7 +62,7 @@ def krakow(n_nodes, edges, alpha=2):
                     small, big = w_v, w_a
                 else:
                     small, big = w_a, w_v
-                d = (small ** alpha) * big / edge_weight
+                d = (small**alpha) * big / edge_weight
                 if d < dmin:
                     b = v
                     dmin = d
@@ -127,20 +123,4 @@ def krakow(n_nodes, edges, alpha=2):
         a = u
         u += 1
 
-    return reorder_dendrogram(np.array(D))
-
-
-def reorder_dendrogram(D):
-    n = np.shape(D)[0] + 1
-    order = np.zeros((2, n - 1), float)
-    order[0] = range(n - 1)
-    order[1] = np.array(D)[:, 2]
-    index = np.lexsort(order)
-    nindex = {i: i for i in range(n)}
-    nindex.update({n + index[t]: n + t for t in range(n - 1)})
-    return np.array(
-        [
-            [nindex[int(D[t][0])], nindex[int(D[t][1])], D[t][2], D[t][3]]
-            for t in range(n - 1)
-        ]
-    )[index, :]
+    return D

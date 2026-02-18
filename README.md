@@ -49,15 +49,14 @@ cd yourtube
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-yourtube-install
 ```
 
 ## Fetch playlists
 
 Fetch your liked and watch later playlists using yt-dlp (uses browser cookies for authentication):
 ```bash
-source .venv/bin/activate
-yourtube-fetch-playlists
+.venv/bin/yourtube-fetch-playlists
+.venv/bin/yourtube-scrape
 ```
 
 Playlist data will be saved to `~/.yourtube/playlists/`.
@@ -65,8 +64,7 @@ Playlist data will be saved to `~/.yourtube/playlists/`.
 ## Running
 
 ```bash
-source .venv/bin/activate
-yourtube
+.venv/bin/yourtube
 ```
 
 YourTube should be now available at: `http://localhost:8866/`
