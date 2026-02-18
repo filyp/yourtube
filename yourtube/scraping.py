@@ -7,7 +7,6 @@ from concurrent.futures import (
     as_completed,
 )
 
-import numpy as np
 import requests
 from tqdm import tqdm
 
@@ -89,16 +88,11 @@ class Scraper:
         Scrapes videos from the ids list and saves recommendations to ~/.yourtube/videos/
 
         ids:
-            can be multidimensional, as long as it is convertible to numpy array
-            it can contain "" elements - they will be skipped
+            iterable of video IDs
         skip_if_fresher_than:
             is in seconds
             if set, videos scraped more recently than this time will be skipped
         """
-        # flatten
-        ids = np.array(ids).flatten()
-        # remove "" elements (they represent empty clusters)
-        ids = [id_ for id_ in ids if id_ != ""]
         ids_to_scrape = self.choose_which_video_to_skip(ids, skip_if_fresher_than)
 
         print(
@@ -145,9 +139,7 @@ def scrape_recommendations(skip_if_fresher_than=60 * 60 * 24 * 7):
     print(f"Found {len(video_ids)} videos in playlists")
 
     with Scraper() as scraper:
-        scraper.scrape_from_list(
-            list(video_ids), skip_if_fresher_than=skip_if_fresher_than
-        )
+        scraper.scrape_from_list(video_ids, skip_if_fresher_than=skip_if_fresher_than)
 
     print("\nSCRAPING FINISHED")
 

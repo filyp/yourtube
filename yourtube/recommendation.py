@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import hashlib
 import logging
 import pickle
 from pathlib import Path
@@ -7,7 +6,8 @@ from time import time
 
 import networkx as nx
 import numpy as np
-from krakow import krakow
+# from krakow import krakow
+from yourtube.optimized_krakow import krakow
 from krakow.utils import (
     create_dendrogram,
     split_into_n_children,
@@ -15,57 +15,43 @@ from krakow.utils import (
 )
 from scipy.cluster.hierarchy import to_tree
 
-from yourtube.file_operations import clustering_cache_path, load_graph, saved_cluster_path
+from yourtube.file_operations import load_graph, saved_cluster_path
 from yourtube.scraping import get_title_oembed
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    logger.addHandler(handler)
 
 
-def cluster_subgraph(
-    nodes_to_cluster, G, balance_alpha=2, balance_beta=2, create_image=True
-):
+def cluster_graph(G, balance_alpha=2, balance_beta=2, create_image=True):
     # note that using create_image=False opens the possibility, that the cached image will be None
     # so watchout for that
 
-    # use cache
-    # here we assume that the same set of nodes will have the same graph structure
-    # this is not true, but collisions are very rare and not destructive
-    sorted_nodes = sorted(nodes_to_cluster)
-    unique_string = "".join(sorted_nodes)
-    node_hash = hashlib.md5(unique_string.encode()).hexdigest()
-    unique_string = f"{balance_alpha:.2f}_{balance_beta:.2f}_{node_hash}"
-    cache_file = clustering_cache_path(unique_string)
-    if cache_file.is_file():
-        logger.info(f"using cached clustering: {cache_file}")
-        start_time = time()
-        with open(cache_file, "rb") as handle:
-            res = pickle.load(handle)
-            logger.info(f"loaded clustering in {time() - start_time:.3f} seconds")
-            return res
-
     start_time = time()
 
-    RecentDirected = G.subgraph(nodes_to_cluster)
-    Recent = RecentDirected.to_undirected()
+    # Use weakly_connected_components directly on DiGraph (treats it as undirected)
+    components = sorted(nx.weakly_connected_components(G), key=len, reverse=True)
+    # Sorted for deterministic ordering and to map back to original IDs
+    main_component_nodes = sorted(components[0])
+    vid_to_idx = {vid: idx for idx, vid in enumerate(main_component_nodes)}
 
-    # choose only the biggest connected component
-    components = sorted(nx.connected_components(Recent), key=len, reverse=True)
-    # for el in components[:5]:
-    #     print(len(el))
-    main_component = components[0]
-    Main = Recent.subgraph(main_component)
+    # Build edge list
+    edges = [
+        (vid_to_idx[u], vid_to_idx[v])
+        for u, v in G.subgraph(main_component_nodes).edges()
+    ]
 
-    D = krakow(Main, alpha=balance_alpha, beta=balance_beta)
+    D = krakow(len(main_component_nodes), edges, alpha=balance_alpha)
     tree = to_tree(D)
     # clustering_quality = 1 - normalized_dasgupta_cost(Main, D)
     clustering_quality = None  # save 10% computation time
 
-    # convert leaf values to original ids
-    main_ids_list = np.array(Main.nodes)
-
+    # convert leaf values back to original video ids
     def substitute_video_id(leaf):
-        leaf.id = main_ids_list[leaf.id]
+        leaf.id = main_component_nodes[leaf.id]
 
     tree.pre_order(substitute_video_id)
 
@@ -73,16 +59,11 @@ def cluster_subgraph(
 
     if create_image:
         img = create_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
+        with open("dendrogram.png", "wb") as f:
+            f.write(img.getvalue())
     else:
         img = None
 
-    # ensure directory exists
-    cache_file.parent.mkdir(parents=True, exist_ok=True)
-    # save to cache
-    with open(cache_file, "wb") as handle:
-        pickle.dump(
-            (tree, img, clustering_quality), handle, protocol=pickle.HIGHEST_PROTOCOL
-        )
     return tree, img, clustering_quality
 
 
@@ -190,7 +171,7 @@ class TreeClimber:
         """Returns -1 if it's already on the highest cluster.
         If succesful, returns 0.
         """
-        if self.path == []:
+        if not self.path:
             return -1
         self.tree = self.path.pop()
         self.branch_id = self.branch_id[:-1]
@@ -215,11 +196,11 @@ class Engine:
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
         self.recommender = Recommender(self.G, parameters.seed)
 
-        nodes_to_cluster = list(self.G.nodes)
+        # nodes_to_cluster = {n for n, deg in self.G.degree() if deg >= 2}
+        nodes_to_cluster = self.G.nodes
 
-        tree, self.dendrogram_img, clustering_quality = cluster_subgraph(
-            nodes_to_cluster,
-            self.G,
+        tree, self.dendrogram_img, clustering_quality = cluster_graph(
+            self.G.subgraph(nodes_to_cluster),
             parameters.clustering_balance_a,
             parameters.clustering_balance_b,
         )
@@ -233,12 +214,10 @@ class Engine:
         )
 
     def choose_column(self, i):
-        exit_code = self.tree_climber.choose_column(i)
-        return exit_code
+        return self.tree_climber.choose_column(i)
 
     def go_back(self):
-        exit_code = self.tree_climber.go_back()
-        return exit_code
+        return self.tree_climber.go_back()
 
     def get_branch_id(self):
         return self.tree_climber.branch_id
@@ -294,4 +273,3 @@ class Engine:
                     self.G.nodes[vid]["title"] = title
                 except Exception as e:
                     pass
-
