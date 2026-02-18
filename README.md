@@ -46,7 +46,7 @@ Better youtube recommendations
 ```bash
 git clone https://github.com/filyp/yourtube.git
 cd yourtube
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 ```

@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Better youtube recommendations"
 authors = [{name = "Filip Sondej", email = "filipsondej@protonmail.com"}]
 license = {text = "LGPL-2.1"}
-requires-python = ">=3.10,<3.12"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "networkx>=2.6.1,<3",
     "tqdm>=4.61.2,<5",
@@ -35,7 +35,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["yourtube"]
+packages = ["yourtube", "yourtube.rust_krakow"]
 
 [tool.black]
 line-length = 100

@@ -1,11 +1,9 @@
 data
 .virtual_documents
 yourtube/.ipynb_checkpoints
-yourtube/__pycache__
 yourtube/junkyard/.ipynb_checkpoints
 .ipynb_checkpoints
 dist
-tests/__pycache__
 commit_message.txt
 .vscode
 *.ipynb
@@ -18,3 +16,4 @@ __init__.py.lprof
 dendrogram.png
 rust_krakow/target
 rust_krakow/Cargo.lock
+**/__pycache__
