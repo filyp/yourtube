@@ -1,8 +1,7 @@
 import base64
 import io
 import logging
-import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,6 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from yourtube import config
 from yourtube.file_operations import get_saved_clusters
 from yourtube.recommendation import Engine
 from yourtube.scraping import get_title_oembed
@@ -34,11 +34,8 @@ class AppState:
     engine: Engine | None = None
     exploration: float = 0.1
     message: str = ""
-    seed: int = field(default_factory=lambda: random.randint(1, 9999))
-    clustering_balance_a: float = 1.7
     num_of_groups: int = 3
     videos_in_group: int = 5
-    show_dendrogram: bool = False
     column_width: int = 390
 
 
@@ -46,12 +43,9 @@ state = AppState()
 
 
 def build_engine():
-    if state.seed < 1 or state.seed > 9999:
-        state.seed = random.randint(1, 9999)
-
     params = SimpleNamespace(
-        seed=state.seed,
-        clustering_balance_a=state.clustering_balance_a,
+        seed=config.clustering_seed,
+        clustering_balance_a=config.balance_alpha,
         num_of_groups=state.num_of_groups,
         videos_in_group=state.videos_in_group,
     )
@@ -96,11 +90,11 @@ def wall_context():
 
 
 def dendrogram_b64():
-    if not state.show_dendrogram or not state.engine or not state.engine.dendrogram_img:
+    if not config.show_dendrogram or not state.engine or not state.engine.dendrogram_img:
         return None
-    buf = io.BytesIO()
-    state.engine.dendrogram_img.savefig(buf, format="png", bbox_inches="tight")
-    return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
+    # dendrogram_img is already a BytesIO object with PNG data
+    state.engine.dendrogram_img.seek(0)
+    return f"data:image/png;base64,{base64.b64encode(state.engine.dendrogram_img.getvalue()).decode()}"
 
 
 def full_context(request):
@@ -124,24 +118,28 @@ def index(request: Request):
     return templates.TemplateResponse("index.html", full_context(request))
 
 
-@app.post("/refresh-engine", response_class=HTMLResponse)
-def refresh_engine(
-    request: Request,
-    seed: int = Form(...),
-    clustering_balance_a: float = Form(...),
-    num_of_groups: int = Form(...),
-    videos_in_group: int = Form(...),
-    show_dendrogram: bool = Form(False),
-    column_width: int = Form(...),
-):
-    state.seed = seed
-    state.clustering_balance_a = clustering_balance_a
+@app.post("/update-num-of-groups", response_class=HTMLResponse)
+def update_num_of_groups(request: Request, num_of_groups: int = Form(...)):
     state.num_of_groups = num_of_groups
+    state.engine.tree_climber.num_of_groups = num_of_groups
+    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = \
+        state.engine.tree_climber.new_offspring(state.engine.tree_climber.tree)
+    return wall_response(request)
+
+
+@app.post("/update-videos-in-group", response_class=HTMLResponse)
+def update_videos_in_group(request: Request, videos_in_group: int = Form(...)):
     state.videos_in_group = videos_in_group
-    state.show_dendrogram = show_dendrogram
+    state.engine.tree_climber.videos_in_group = videos_in_group
+    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = \
+        state.engine.tree_climber.new_offspring(state.engine.tree_climber.tree)
+    return wall_response(request)
+
+
+@app.post("/update-column-width", response_class=HTMLResponse)
+def update_column_width(request: Request, column_width: int = Form(...)):
     state.column_width = column_width
-    build_engine()
-    return templates.TemplateResponse("index.html", full_context(request))
+    return wall_response(request)
 
 
 @app.get("/title/{video_id}", response_class=HTMLResponse)

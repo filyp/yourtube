@@ -23,6 +23,7 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
+# @profile
 def cluster_graph(G, balance_alpha=2, create_image=True):
     # note that using create_image=False opens the possibility, that the cached image will be None
     # so watchout for that
@@ -56,8 +57,8 @@ def cluster_graph(G, balance_alpha=2, create_image=True):
 
     if create_image:
         img = create_dendrogram(D, clusters_limit=100, width=17.8, height=1.5)
-        with open("dendrogram.png", "wb") as f:
-            f.write(img.getvalue())
+        # with open("dendrogram.png", "wb") as f:
+        #     f.write(img.getvalue())
     else:
         img = None
 
