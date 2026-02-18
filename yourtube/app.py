@@ -37,6 +37,8 @@ class AppState:
     num_of_groups: int = 3
     videos_in_group: int = 5
     column_width: int = 390
+    selected_playlist: str = ""
+    playlist_range: tuple = (0.0, 1.0)
 
 
 state = AppState()
@@ -57,6 +59,8 @@ def build_engine():
         state.message = "Nothing to show :("
     else:
         state.message = ""
+        state.selected_playlist = state.engine.playlists[0]
+        state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
 
 
 def wall_context():
@@ -101,6 +105,9 @@ def full_context(request):
     ctx = {"request": request, "state": state, "saved_clusters": get_saved_clusters()}
     ctx.update(wall_context())
     ctx["dendrogram_src"] = dendrogram_b64()
+    ctx["playlists"] = state.engine.playlists
+    ctx["selected_playlist"] = state.selected_playlist
+    ctx["playlist_range"] = state.playlist_range
     return ctx
 
 
@@ -139,6 +146,20 @@ def update_videos_in_group(request: Request, videos_in_group: int = Form(...)):
 @app.post("/update-column-width", response_class=HTMLResponse)
 def update_column_width(request: Request, column_width: int = Form(...)):
     state.column_width = column_width
+    return wall_response(request)
+
+
+@app.post("/update-rank-playlist", response_class=HTMLResponse)
+def update_rank_playlist(request: Request, rank_playlist: str = Form(...)):
+    state.selected_playlist = rank_playlist
+    state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
+    return wall_response(request)
+
+
+@app.post("/update-playlist-range", response_class=HTMLResponse)
+def update_playlist_range(request: Request, range_start: float = Form(...), range_end: float = Form(...)):
+    state.playlist_range = (range_start, range_end)
+    state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
     return wall_response(request)
 
 

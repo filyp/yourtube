@@ -30,6 +30,41 @@
                    oninput="this.nextElementSibling.textContent = this.value">
             <span class="range-val">{{ state.column_width }}</span>
         </label>
+        {% if playlists %}
+        <div class="sidebar-label">Rank by playlist</div>
+        <select name="rank_playlist" class="sidebar-select"
+                hx-post="/update-rank-playlist" hx-target="#video-wall" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="this">
+            {% for name in playlists %}
+            <option value="{{ name }}" {% if name == selected_playlist %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <div class="range-slider-label">
+            <span>Playlist range</span>
+            <span class="range-val" id="range-display">{{ "%.0f"|format(playlist_range[0]*100) }}-{{ "%.0f"|format(playlist_range[1]*100) }}%</span>
+        </div>
+        <div class="dual-range" hx-post="/update-playlist-range" hx-target="#video-wall" hx-swap="outerHTML"
+             hx-trigger="change from:input" hx-include="#range-start, #range-end">
+            <input type="range" id="range-start" name="range_start" 
+                   min="0" max="1" step="0.01" value="{{ playlist_range[0] }}"
+                   oninput="updateRangeDisplay()">
+            <input type="range" id="range-end" name="range_end"
+                   min="0" max="1" step="0.01" value="{{ playlist_range[1] }}"
+                   oninput="updateRangeDisplay()">
+        </div>
+        <script>
+        function updateRangeDisplay() {
+            const start = document.getElementById('range-start');
+            const end = document.getElementById('range-end');
+            // Prevent crossing
+            if (parseFloat(start.value) > parseFloat(end.value)) {
+                start.value = end.value;
+            }
+            document.getElementById('range-display').textContent = 
+                Math.round(start.value * 100) + '-' + Math.round(end.value * 100) + '%';
+        }
+        </script>
+        {% endif %}
     </aside>
 
     <main>
