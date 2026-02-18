@@ -1,6 +1,13 @@
 <div id="video-wall">
     {% if request.headers.get('HX-Request') %}
     <div id="message" hx-swap-oob="innerHTML">{{ message }}</div>
+    {% if saved_clusters is defined %}
+    <select name="saved_cluster" id="saved-clusters-dropdown" hx-swap-oob="true">
+        {% for name in saved_clusters %}
+        <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
     {% endif %}
 
     {% if video_data %}

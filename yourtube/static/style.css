@@ -138,14 +138,24 @@ button:active { background: #a66ef0; }
 .range-val { font-size: 12px; color: #999; min-width: 30px; text-align: right; }
 
 /* Dual range slider */
+.range-slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #999;
+}
+
 .dual-range {
     position: relative;
     height: 20px;
     margin-bottom: 12px;
-    width: 200px;
+    width: 100%;
 }
 
-.dual-range input {
+aside .dual-range input[type="range"] {
     position: absolute;
     width: 100%;
     pointer-events: none;

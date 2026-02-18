@@ -207,7 +207,8 @@ def update_exploration(request: Request, exploration: float = Form(...)):
 def save_cluster(request: Request, cluster_name: str = Form("")):
     msg = state.engine.save_current_cluster(cluster_name)
     state.message = msg
-    return wall_response(request)
+    ctx = {"request": request, **wall_context(), "saved_clusters": get_saved_clusters()}
+    return templates.TemplateResponse("partials/video_wall.html", ctx)
 
 
 @app.post("/load-cluster", response_class=HTMLResponse)

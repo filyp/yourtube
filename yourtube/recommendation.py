@@ -8,7 +8,10 @@ import networkx as nx
 import numpy as np
 
 from krakow import reorder_dendrogram
-from yourtube.optimized_krakow import krakow
+
+# from yourtube.optimized_krakow import krakow
+from .rust_krakow import krakow
+
 from krakow.utils import create_dendrogram, split_into_n_children
 from scipy.cluster.hierarchy import to_tree
 
@@ -62,7 +65,7 @@ def cluster_graph(G, balance_alpha=2, create_image=True):
         #     f.write(img.getvalue())
     else:
         img = None
-
+        
     return tree, img
 
 
@@ -106,7 +109,10 @@ class Recommender:
     def get_index(self, length, exploration):
         assert 0 <= exploration <= 1
         np.random.seed(self.seed + length)
-        position = np.random.triangular(1 - exploration, 1, 1)
+        if exploration == 0:
+            position = 1
+        else:
+            position = np.random.triangular(1 - exploration, 1, 1)
         # other potential distributions are: exponential, lognormal
         index = int(length * position)
         # just to be sure, that we don't get IndexError due to numerical rounding
@@ -120,7 +126,7 @@ class Recommender:
 
         index = self.get_index(len(ids), params["exploration"])
 
-        ranks = [self.node_ranks[id_] for id_ in ids]
+        ranks = [self.node_ranks.get(id_, 0) for id_ in ids]
         # find the index on ids list of the video with index'th smallest rank
         index_on_ids_list = np.argpartition(ranks, index)[index]
         chosen_id = ids[index_on_ids_list]
@@ -241,6 +247,14 @@ class Engine:
             return "you must enter some name for this cluster, before saving it"
 
         path = saved_cluster_path(cluster_name)
+
+        # Copy mutable data to avoid "dictionary changed size during iteration"
+        # errors when concurrent requests modify the graph or node_ranks
+        data_to_save = (
+            self.tree_climber.tree,
+            dict(self.recommender.node_ranks),
+            self.G.copy(),
+        )
 
         data_to_save = (
             self.tree_climber.tree,
