@@ -34,6 +34,9 @@ yourtube-scrape = "yourtube.scraping:scrape_recommendations"
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["yourtube"]
+
 [tool.black]
 line-length = 100
 
