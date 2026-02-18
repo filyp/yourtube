@@ -13,12 +13,7 @@ logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
 
 BASE_DIR = Path.home() / ".yourtube"
-CLUSTERING_CACHE_DIR = BASE_DIR / "clustering_cache"
 SAVED_CLUSTERS_DIR = BASE_DIR / "saved_clusters"
-
-
-def clustering_cache_path(unique_string):
-    return CLUSTERING_CACHE_DIR / f"{unique_string}.pickle"
 
 
 def saved_cluster_path(cluster_name):

@@ -4,6 +4,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 
 import matplotlib
 matplotlib.use("Agg")
@@ -14,7 +15,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from yourtube.file_operations import load_graph, get_saved_clusters
+from yourtube.file_operations import get_saved_clusters
 from yourtube.recommendation import Engine
 from yourtube.scraping import get_title_oembed
 
@@ -46,27 +47,24 @@ state = AppState()
 
 
 def build_engine():
-    G = load_graph()
-    if len(G.nodes) == 0:
-        state.engine = None
-        state.message = "Nothing to show :("
-        return
-
     if state.seed < 1 or state.seed > 9999:
         state.seed = random.randint(1, 9999)
 
-    class Params:
-        pass
+    params = SimpleNamespace(
+        seed=state.seed,
+        clustering_balance_a=state.clustering_balance_a,
+        clustering_balance_b=state.clustering_balance_b,
+        num_of_groups=state.num_of_groups,
+        videos_in_group=state.videos_in_group,
+    )
 
-    params = Params()
-    params.seed = state.seed
-    params.clustering_balance_a = state.clustering_balance_a
-    params.clustering_balance_b = state.clustering_balance_b
-    params.num_of_groups = state.num_of_groups
-    params.videos_in_group = state.videos_in_group
+    state.engine = Engine(params)
 
-    state.engine = Engine(G, params)
-    state.message = ""
+    if len(state.engine.G.nodes) == 0:
+        state.engine = None
+        state.message = "Nothing to show :("
+    else:
+        state.message = ""
 
 
 def wall_context():

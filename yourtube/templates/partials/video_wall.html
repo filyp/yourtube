@@ -1,5 +1,5 @@
 <div id="video-wall">
-    {% if message %}
+    {% if request.headers.get('HX-Request') %}
     <div id="message" hx-swap-oob="innerHTML">{{ message }}</div>
     {% endif %}
 

@@ -83,7 +83,7 @@ button:active { background: #a66ef0; }
 
 /* Group buttons */
 .group-btn {
-    width: 60px;
+    width: 96px;
     display: block;
     font-size: 14px;
 }

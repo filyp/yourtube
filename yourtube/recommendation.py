@@ -15,7 +15,7 @@ from krakow.utils import (
 )
 from scipy.cluster.hierarchy import to_tree
 
-from yourtube.file_operations import clustering_cache_path, saved_cluster_path
+from yourtube.file_operations import clustering_cache_path, load_graph, saved_cluster_path
 from yourtube.scraping import get_title_oembed
 
 logger = logging.getLogger("yourtube")
@@ -207,16 +207,15 @@ class TreeClimber:
 
 
 class Engine:
-    def __init__(self, G, parameters):
-        self.G = G
+    def __init__(self, parameters):
+        self.G = load_graph()
         self.num_of_groups = parameters.num_of_groups
         self.videos_in_group = parameters.videos_in_group
 
         self.tree_climber = TreeClimber(self.num_of_groups, self.videos_in_group)
-        self.recommender = Recommender(G, parameters.seed)
+        self.recommender = Recommender(self.G, parameters.seed)
 
-        nodes_to_cluster = select_nodes_to_cluster(self.G)
-        self._nodes = nodes_to_cluster
+        nodes_to_cluster = list(self.G.nodes)
 
         tree, self.dendrogram_img, clustering_quality = cluster_subgraph(
             nodes_to_cluster,
@@ -295,10 +294,4 @@ class Engine:
                     self.G.nodes[vid]["title"] = title
                 except Exception as e:
                     pass
-
-
-def select_nodes_to_cluster(G):
-    sources = list(G.nodes)
-    out_edges = G.out_edges(sources)
-    return list(G.edge_subgraph(out_edges).nodes)
 
