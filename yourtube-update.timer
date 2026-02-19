@@ -3,6 +3,9 @@ Description=Run YourTube update weekly
 
 [Timer]
 OnCalendar=weekly
+# Randomize the time so that different users scrape at different times
+RandomizedDelaySec=1w
+FixedRandomDelay=true
 Persistent=true
 
 [Install]

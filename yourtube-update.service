@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+# Wait for Syncthing to sync videos before scraping
+ExecStart=/usr/bin/sleep 600
 ExecStart=%h/projects/yourtube/.venv/bin/yourtube-fetch-playlists
 ExecStart=%h/projects/yourtube/.venv/bin/yourtube-scrape
 
