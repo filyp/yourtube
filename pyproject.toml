@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Better youtube recommendations"
 authors = [{name = "Filip Sondej"}]
 license = {text = "LGPL-2.1"}
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "networkx>=2.6.1,<3",
     "tqdm>=4.61.2,<5",
@@ -21,10 +21,12 @@ dependencies = [
     "jinja2>=3.1,<4",
     "python-multipart>=0.0.18,<1",
     "krakow>=0.2.0,<1",
-    "krakow-rust>=0.1.0",
     "pyyaml>=6.0.1,<7",
     "yt-dlp>=2026.2.4",
 ]
+
+[project.optional-dependencies]
+fast = ["krakow-rust>=0.1.0"]
 
 [project.scripts]
 yourtube = "yourtube.__init__:main"

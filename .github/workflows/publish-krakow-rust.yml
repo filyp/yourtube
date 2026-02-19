@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'krakow-rust-v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,7 +22,7 @@ jobs:
         with:
           command: publish
           target: ${{ matrix.target }}
-          args: -m krakow_rust/Cargo.toml --interpreter 3.11 3.12 3.13 --skip-existing
+          args: -m krakow_rust/Cargo.toml --interpreter 3.11 3.12 3.13 3.14 --skip-existing
           manylinux: auto
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
