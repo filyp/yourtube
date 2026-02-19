@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "krakow-rust"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast Rust implementation of the Krakow hierarchical clustering algorithm"
 authors = [{name = "Filip Sondej"}]
 license = {text = "BSD-3-Clause"}
