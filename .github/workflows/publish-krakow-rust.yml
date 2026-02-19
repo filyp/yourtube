@@ -26,3 +26,4 @@ jobs:
           manylinux: auto
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
