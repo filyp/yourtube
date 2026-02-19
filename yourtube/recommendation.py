@@ -17,7 +17,6 @@ except ImportError:
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import load_graph, saved_cluster_path
-from yourtube.json_db import get_playlist_names, get_playlist_video_ids_by_name
 from yourtube.scraping import get_title_oembed
 
 logger = logging.getLogger("yourtube")
@@ -87,24 +86,14 @@ class Recommender:
         self.seed = seed
         assert 1 <= seed <= 9999
 
-    def compute_node_ranks(self, ids, source_ids=None):
-        """This function must be called on given ids before we can use recommender on those ids.
-
-        Args:
-            ids: All video IDs to compute ranks for
-            source_ids: If provided, only count incoming edges from these source nodes.
-                       If None, uses all ids as sources (original behavior).
-        """
-        if source_ids is None:
-            source_ids = ids
-
-        # compute node ranks
+    def compute_node_ranks(self, ids):
+        """This function must be called on given ids before we can use recommender on those ids."""
         self.node_ranks = dict()
-        source_videos_set = set(source_ids)
+        ids_set = set(ids)
         for id_ in ids:
             in_edges = self.G.in_edges(id_)
             in_nodes = {u for u, v in in_edges}
-            rank = len(in_nodes & source_videos_set)
+            rank = len(in_nodes & ids_set)
             self.node_ranks[id_] = rank
 
     def get_index(self, length, exploration):
@@ -215,16 +204,8 @@ class Engine:
             parameters.clustering_balance_a,
         )
         self.video_ids = tree.pre_order()
-        self.playlists = get_playlist_names()
         self.tree_climber.reset(tree)
-
-    def recompute_ranks(self, playlist_name, range_start, range_end):
-        """Recompute node ranks based on playlist and range."""
-        source_ids = get_playlist_video_ids_by_name(
-            playlist_name, range_start, range_end
-        )
-        source_ids = source_ids & set(self.video_ids)
-        self.recommender.compute_node_ranks(self.video_ids, source_ids)
+        self.recommender.compute_node_ranks(self.video_ids)
 
     def get_video_ids(self, recommendation_parameters):
         return self.recommender.build_wall(

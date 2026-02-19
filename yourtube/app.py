@@ -42,13 +42,11 @@ templates = Jinja2Templates(directory=app_dir / "templates")
 @dataclass
 class AppState:
     engine: Engine | None = None
-    exploration: float = 0.3
+    exploration: float = 1
     message: str = ""
     num_of_groups: int = 3
     videos_in_group: int = 5
     column_width: int = 230
-    selected_playlist: str = ""
-    playlist_range: tuple = (0.0, 1.0)
 
 
 state = AppState()
@@ -66,11 +64,9 @@ def build_engine():
 
     if len(state.engine.G.nodes) == 0:
         state.engine = None
-        state.message = "Nothing to show :("
+        state.message = "nothing to show :("
     else:
-        state.message = ""
-        state.selected_playlist = state.engine.playlists[0]
-        state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
+        state.message = "top of the tree"
 
 
 def wall_context():
@@ -127,9 +123,6 @@ def full_context(request):
     ctx = {"request": request, "state": state, "saved_clusters": get_saved_clusters()}
     ctx.update(wall_context())
     ctx["dendrogram_src"] = dendrogram_b64()
-    ctx["playlists"] = state.engine.playlists
-    ctx["selected_playlist"] = state.selected_playlist
-    ctx["playlist_range"] = state.playlist_range
     return ctx
 
 
@@ -178,22 +171,6 @@ def update_column_width(request: Request, column_width: int = Form(...)):
     return wall_response(request)
 
 
-@app.post("/update-rank-playlist", response_class=HTMLResponse)
-def update_rank_playlist(request: Request, rank_playlist: str = Form(...)):
-    state.selected_playlist = rank_playlist
-    state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
-    return wall_response(request)
-
-
-@app.post("/update-playlist-range", response_class=HTMLResponse)
-def update_playlist_range(
-    request: Request, range_start: float = Form(...), range_end: float = Form(...)
-):
-    state.playlist_range = (range_start, range_end)
-    state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
-    return wall_response(request)
-
-
 @app.get("/title/{video_id}", response_class=HTMLResponse)
 def title(video_id: str):
     # return cached title if available
@@ -213,8 +190,10 @@ def choose_column(request: Request, i: int):
     exit_code = state.engine.tree_climber.choose_column(i)
     if exit_code == -1:
         state.message = "already on the lowest cluster"
+    elif state.engine.tree_climber.branch_id == "":
+        state.message = "top of the tree"
     else:
-        state.message = "Branch path: " + state.engine.tree_climber.branch_id
+        state.message = "branch path: " + state.engine.tree_climber.branch_id
     return wall_response(request)
 
 
@@ -223,8 +202,10 @@ def go_back(request: Request):
     exit_code = state.engine.tree_climber.go_back()
     if exit_code == -1:
         state.message = "already on the highest cluster"
+    elif state.engine.tree_climber.branch_id == "":
+        state.message = "top of the tree"
     else:
-        state.message = "Branch path: " + state.engine.tree_climber.branch_id
+        state.message = "branch path: " + state.engine.tree_climber.branch_id
     return wall_response(request)
 
 

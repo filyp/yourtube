@@ -3,12 +3,7 @@ from pathlib import Path
 
 import networkx as nx
 
-from yourtube.json_db import (
-    all_video_ids,
-    get_playlist_video_ids,
-    get_playlist_entries,
-    read_video,
-)
+from yourtube.json_db import all_video_ids, get_playlist_entries, read_video
 
 logger = logging.getLogger("yourtube")
 logger.setLevel(logging.DEBUG)
