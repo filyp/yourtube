@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -75,7 +76,12 @@ def build_engine():
 def wall_context():
     engine = state.engine
     if engine is None:
-        return {"video_data": None, "videos_flat": [], "children_sizes": [], "message": state.message}
+        return {
+            "video_data": None,
+            "videos_flat": [],
+            "children_sizes": [],
+            "message": state.message,
+        }
 
     params = {"exploration": state.exploration}
     ids_2d = engine.get_video_ids(params)
@@ -84,7 +90,9 @@ def wall_context():
     for row in ids_2d:
         for vid in row:
             rank = engine.recommender.node_ranks.get(vid, 0)
-            videos_flat.append({"id": vid, "title": engine.get_video_title(vid), "rank": rank})
+            videos_flat.append(
+                {"id": vid, "title": engine.get_video_title(vid), "rank": rank}
+            )
 
     children_sizes = [len(c.pre_order()) for c in engine.tree_climber.children]
     button_height = state.column_width * 9 // 16
@@ -104,7 +112,11 @@ def wall_context():
 
 
 def dendrogram_b64():
-    if not config.show_dendrogram or not state.engine or not state.engine.dendrogram_img:
+    if (
+        not config.show_dendrogram
+        or not state.engine
+        or not state.engine.dendrogram_img
+    ):
         return None
     # dendrogram_img is already a BytesIO object with PNG data
     state.engine.dendrogram_img.seek(0)
@@ -122,7 +134,9 @@ def full_context(request):
 
 
 def wall_response(request):
-    return templates.TemplateResponse("partials/video_wall.html", {"request": request, **wall_context()})
+    return templates.TemplateResponse(
+        "partials/video_wall.html", {"request": request, **wall_context()}
+    )
 
 
 @app.post("/reset", response_class=HTMLResponse)
@@ -142,8 +156,9 @@ def index(request: Request):
 def update_num_of_groups(request: Request, num_of_groups: int = Form(...)):
     state.num_of_groups = num_of_groups
     state.engine.tree_climber.num_of_groups = num_of_groups
-    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = \
+    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = (
         state.engine.tree_climber.new_offspring(state.engine.tree_climber.tree)
+    )
     return wall_response(request)
 
 
@@ -151,8 +166,9 @@ def update_num_of_groups(request: Request, num_of_groups: int = Form(...)):
 def update_videos_in_group(request: Request, videos_in_group: int = Form(...)):
     state.videos_in_group = videos_in_group
     state.engine.tree_climber.videos_in_group = videos_in_group
-    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = \
+    state.engine.tree_climber.children, state.engine.tree_climber.grandchildren = (
         state.engine.tree_climber.new_offspring(state.engine.tree_climber.tree)
+    )
     return wall_response(request)
 
 
@@ -170,7 +186,9 @@ def update_rank_playlist(request: Request, rank_playlist: str = Form(...)):
 
 
 @app.post("/update-playlist-range", response_class=HTMLResponse)
-def update_playlist_range(request: Request, range_start: float = Form(...), range_end: float = Form(...)):
+def update_playlist_range(
+    request: Request, range_start: float = Form(...), range_end: float = Form(...)
+):
     state.playlist_range = (range_start, range_end)
     state.engine.recompute_ranks(state.selected_playlist, *state.playlist_range)
     return wall_response(request)

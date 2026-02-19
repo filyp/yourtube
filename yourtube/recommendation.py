@@ -65,7 +65,7 @@ def cluster_graph(G, balance_alpha=2, create_image=True):
         #     f.write(img.getvalue())
     else:
         img = None
-        
+
     return tree, img
 
 
@@ -88,7 +88,7 @@ class Recommender:
 
     def compute_node_ranks(self, ids, source_ids=None):
         """This function must be called on given ids before we can use recommender on those ids.
-        
+
         Args:
             ids: All video IDs to compute ranks for
             source_ids: If provided, only count incoming edges from these source nodes.
@@ -219,7 +219,9 @@ class Engine:
 
     def recompute_ranks(self, playlist_name, range_start, range_end):
         """Recompute node ranks based on playlist and range."""
-        source_ids = get_playlist_video_ids_by_name(playlist_name, range_start, range_end)
+        source_ids = get_playlist_video_ids_by_name(
+            playlist_name, range_start, range_end
+        )
         source_ids = source_ids & set(self.video_ids)
         self.recommender.compute_node_ranks(self.video_ids, source_ids)
 

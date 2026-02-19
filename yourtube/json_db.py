@@ -40,7 +40,7 @@ def _read_playlist(playlist_name):
 
 def _extract_video_ids(playlist, range_start=0.0, range_end=1.0):
     """Extract video IDs from a playlist dict, optionally slicing by range.
-    
+
     Args:
         playlist: Playlist dict with 'entries' key
         range_start: Start of range as fraction (0.0 to 1.0)
@@ -87,7 +87,7 @@ def get_playlist_names():
 
 def get_playlist_video_ids_by_name(playlist_name, range_start=0.0, range_end=1.0):
     """Returns set of video IDs from a specific playlist.
-    
+
     Args:
         playlist_name: Name of the playlist
         range_start: Start of range as fraction (0.0 to 1.0)
