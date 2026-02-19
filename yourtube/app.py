@@ -1,5 +1,4 @@
 import base64
-import io
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +7,8 @@ from types import SimpleNamespace
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
@@ -24,7 +25,15 @@ plt.style.use("dark_background")
 logger = logging.getLogger("yourtube")
 
 app_dir = Path(__file__).parent
-app = FastAPI()
+
+
+@asynccontextmanager
+async def lifespan(app):
+    build_engine()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=app_dir / "static"), name="static")
 templates = Jinja2Templates(directory=app_dir / "templates")
 
@@ -32,7 +41,7 @@ templates = Jinja2Templates(directory=app_dir / "templates")
 @dataclass
 class AppState:
     engine: Engine | None = None
-    exploration: float = 0.1
+    exploration: float = 0.3
     message: str = ""
     num_of_groups: int = 3
     videos_in_group: int = 5
@@ -74,7 +83,8 @@ def wall_context():
     videos_flat = []
     for row in ids_2d:
         for vid in row:
-            videos_flat.append({"id": vid, "title": engine.get_video_title(vid)})
+            rank = engine.recommender.node_ranks.get(vid, 0)
+            videos_flat.append({"id": vid, "title": engine.get_video_title(vid), "rank": rank})
 
     children_sizes = [len(c.pre_order()) for c in engine.tree_climber.children]
     button_height = state.column_width * 9 // 16
@@ -113,11 +123,6 @@ def full_context(request):
 
 def wall_response(request):
     return templates.TemplateResponse("partials/video_wall.html", {"request": request, **wall_context()})
-
-
-@app.on_event("startup")
-def startup():
-    build_engine()
 
 
 @app.post("/reset", response_class=HTMLResponse)
@@ -187,21 +192,21 @@ def title(video_id: str):
 
 @app.post("/choose-column/{i}", response_class=HTMLResponse)
 def choose_column(request: Request, i: int):
-    exit_code = state.engine.choose_column(i)
+    exit_code = state.engine.tree_climber.choose_column(i)
     if exit_code == -1:
         state.message = "already on the lowest cluster"
     else:
-        state.message = state.engine.get_branch_id()
+        state.message = "Branch path: " + state.engine.tree_climber.branch_id
     return wall_response(request)
 
 
 @app.post("/go-back", response_class=HTMLResponse)
 def go_back(request: Request):
-    exit_code = state.engine.go_back()
+    exit_code = state.engine.tree_climber.go_back()
     if exit_code == -1:
         state.message = "already on the highest cluster"
     else:
-        state.message = state.engine.get_branch_id()
+        state.message = "Branch path: " + state.engine.tree_climber.branch_id
     return wall_response(request)
 
 

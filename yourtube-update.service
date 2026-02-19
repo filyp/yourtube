@@ -1,0 +1,10 @@
+[Unit]
+Description=YourTube playlist fetch and scrape
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/projects/yourtube/.venv/bin/yourtube-fetch-playlists
+ExecStart=%h/projects/yourtube/.venv/bin/yourtube-scrape
+

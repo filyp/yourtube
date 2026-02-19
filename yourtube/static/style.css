@@ -90,16 +90,16 @@ button:active { background: #a66ef0; }
 
 /* Message */
 #message {
-    min-height: 20px;
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: #aaa;
+    min-height: 28px;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #fff;
 }
 
 /* Wall layout */
 .wall-layout {
     display: flex;
-    gap: 12px;
+    gap: 20px;
 }
 
 .group-buttons {
@@ -123,6 +123,23 @@ button:active { background: #a66ef0; }
     width: 100%;
     object-fit: contain;
     border-radius: 4px;
+}
+
+.video-info {
+    display: flex;
+    gap: 6px;
+}
+
+.video-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.video-rank {
+    font-size: 11px;
+    color: #888;
+    flex-shrink: 0;
 }
 
 /* Dendrogram */

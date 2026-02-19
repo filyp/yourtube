@@ -30,8 +30,11 @@
                 <a href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank">
                     <img src="https://i.ytimg.com/vi/{{ video.id }}/mqdefault.jpg">
                 </a>
-                <a href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank"
-                   {% if not video.title %}hx-get="/title/{{ video.id }}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{{ video.title }}</a>
+                <div class="video-info">
+                    <a class="video-title" href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank"
+                       {% if not video.title %}hx-get="/title/{{ video.id }}" hx-trigger="load" hx-swap="innerHTML"{% endif %}>{{ video.title }}</a>
+                    <span class="video-rank">{{ video.rank }}</span>
+                </div>
             </div>
             {% endfor %}
         </div>

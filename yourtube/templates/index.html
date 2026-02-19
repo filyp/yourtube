@@ -4,11 +4,20 @@
     <meta charset="utf-8">
     <title>YourTube</title>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
     <aside>
         <h2>YourTube</h2>
+        <div class="range-slider-label">
+            <span>Exploration</span>
+            <span class="range-val">{{ state.exploration }}</span>
+        </div>
+        <input type="range" name="exploration" value="{{ state.exploration }}" min="0" max="1" step="0.01"
+               hx-post="/update-exploration" hx-target="#video-wall" hx-swap="outerHTML"
+               hx-trigger="change" hx-include="this"
+               oninput="this.previousElementSibling.querySelector('.range-val').textContent = this.value">
+
         <div class="range-slider-label">
             <span>Groups</span>
             <span class="range-val">{{ state.num_of_groups }}</span>
@@ -81,12 +90,6 @@
             <button hx-post="/go-back" hx-target="#video-wall" hx-swap="outerHTML">Go back</button>
 
             <div class="sep"></div>
-
-            <label style="font-size:13px;">Exploration</label>
-            <input type="range" name="exploration" value="{{ state.exploration }}"
-                   min="0" max="1" step="0.01"
-                   hx-post="/update-exploration" hx-target="#video-wall" hx-swap="outerHTML"
-                   hx-trigger="change" hx-include="this">
 
             <input type="text" name="cluster_name" placeholder="Cluster name">
             <button hx-post="/save-cluster" hx-target="#video-wall" hx-swap="outerHTML"

@@ -133,7 +133,7 @@ class Scraper:
             future.cancel()
 
 
-def scrape_recommendations(skip_if_fresher_than=60 * 60 * 24 * 7):
+def scrape_recommendations(skip_if_fresher_than=60 * 60 * 24 * 3):
     """Scrape recommendations for all videos found in playlist JSONs."""
     video_ids = get_playlist_video_ids()
     print(f"Found {len(video_ids)} videos in playlists")

@@ -228,15 +228,6 @@ class Engine:
             self.tree_climber.grandchildren, recommendation_parameters
         )
 
-    def choose_column(self, i):
-        return self.tree_climber.choose_column(i)
-
-    def go_back(self):
-        return self.tree_climber.go_back()
-
-    def get_branch_id(self):
-        return self.tree_climber.branch_id
-
     def get_video_title(self, video_id):
         return self.G.nodes[video_id].get("title", "")
 
@@ -244,9 +235,13 @@ class Engine:
         # sanitize cluster name
         cluster_name = cluster_name.replace("/", "-")
         if cluster_name == "":
-            return "you must enter some name for this cluster, before saving it"
+            return "You must enter some name for this cluster, before saving it"
 
         path = saved_cluster_path(cluster_name)
+
+        # fail if cluster already exists
+        if Path(path).exists():
+            return "Saving the cluster failed: name already exists"
 
         # Copy mutable data to avoid "dictionary changed size during iteration"
         # errors when concurrent requests modify the graph or node_ranks
@@ -254,12 +249,6 @@ class Engine:
             self.tree_climber.tree,
             dict(self.recommender.node_ranks),
             self.G.copy(),
-        )
-
-        data_to_save = (
-            self.tree_climber.tree,
-            self.recommender.node_ranks,
-            self.G,
         )
 
         # make sure directory exists

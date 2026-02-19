@@ -41,7 +41,7 @@ Better youtube recommendations
 - For these reasons, it's better to start with an existing recomender system as a "bottom layer", and then build any new features we want, on top of it.
 </details>
 
-# Local installation
+# Installation
 
 ```bash
 git clone https://github.com/filyp/yourtube.git
@@ -68,3 +68,30 @@ Playlist data will be saved to `~/.yourtube/playlists/`.
 ```
 
 YourTube should be now available at: `http://localhost:8866/`
+
+
+# Optional features
+
+## Automatic weekly updates
+
+To automatically fetch playlists and scrape weekly, enable the systemd user timer:
+
+```bash
+ln -s "$(pwd)/yourtube-update.service" ~/.config/systemd/user/
+ln -s "$(pwd)/yourtube-update.timer" ~/.config/systemd/user/
+systemctl --user enable --now yourtube-update.timer
+```
+
+The timer uses `Persistent=true`, so it will catch up if your machine was off during the scheduled time.
+
+To check the timer status:
+```bash
+systemctl --user status yourtube-update.timer
+systemctl --user list-timers
+```
+
+## Collaboration
+
+It's fun to share some interesting clusters you find with your friends. To do this, set up a sync of your `~/.yourtube/saved_clusters/` folders, for example using [Syncthing](https://syncthing.net/).
+
+The saved clusters are self-contained, so others can open them even if they never scraped the videos from that cluster.
