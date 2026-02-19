@@ -1,0 +1,24 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "krakow-rust"
+version = "0.1.0"
+description = "Fast Rust implementation of the Krakow hierarchical clustering algorithm"
+authors = [{name = "Filip Sondej"}]
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.11,<3.14"
+keywords = ["clustering", "hierarchical", "graph"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "krakow_rust"
+

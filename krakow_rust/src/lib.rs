@@ -157,7 +157,7 @@ fn krakow(n_nodes: usize, edges: Vec<(usize, usize)>, alpha: f64) -> PyResult<Ve
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn rust_krakow(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn krakow_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(krakow, m)?)?;
     Ok(())
 }

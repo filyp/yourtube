@@ -8,11 +8,12 @@ import networkx as nx
 import numpy as np
 
 from krakow import reorder_dendrogram
-
-# from yourtube.optimized_krakow import krakow
-from .rust_krakow import krakow
-
 from krakow.utils import create_dendrogram, split_into_n_children
+
+try:
+    from krakow_rust import krakow
+except ImportError:
+    from yourtube.optimized_krakow import krakow
 from scipy.cluster.hierarchy import to_tree
 
 from yourtube.file_operations import load_graph, saved_cluster_path

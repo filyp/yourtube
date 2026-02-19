@@ -1,0 +1,18 @@
+name: Publish krakow-rust
+
+on:
+  push:
+    tags:
+      - 'krakow-rust-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: PyO3/maturin-action/.github/workflows/release.yml@v1
+    with:
+      working-directory: krakow_rust
+    secrets:
+      pypi-token: ${{ secrets.PYPI_TOKEN_KRAKOW }}
+
