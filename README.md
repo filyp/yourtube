@@ -44,7 +44,7 @@ git clone https://github.com/filyp/yourtube.git
 cd yourtube
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[fast]"
 ```
 
 ## Fetch playlists
