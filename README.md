@@ -91,3 +91,5 @@ systemctl --user list-timers
 It's fun to share some interesting clusters you find with your friends. To do this, set up a sync of your `~/.yourtube/saved_clusters/` folders, for example using [Syncthing](https://syncthing.net/).
 
 The saved clusters are self-contained, so others can open them even if they never scraped the videos from that cluster.
+
+You can also go a step further and sync your `~/.yourtube/videos` folders, which will merge your recommendation graphs.
